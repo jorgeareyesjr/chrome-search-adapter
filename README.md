@@ -1,1 +1,1 @@
-# search-adapter
+# chrome-search-adapter
