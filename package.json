@@ -5,10 +5,12 @@
   "main": "index.js",
   "scripts": {
     "clear:app": "rm -rf build",
-    "clear": "npm run clear:app",
-    "build:dev-app": "webpack --config webpack/webpack.dev.js",
+    "clear:extension": "rm -rf src/extension/js",
+    "clear": "npm run clear:app & npm run clear:extension",
+    "build:dev:app": "webpack --config webpack/webpack.dev.js",
+    "build:dev:extension": "NODE_ENV=development webpack --config webpack/webpack.dev.js",
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
-    "start": "npm run build:dev-app && npm run start:dev-server"
+    "start": "npm run build:dev:app && npm run start:dev-server"
   },
   "repository": {
     "type": "git",
