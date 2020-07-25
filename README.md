@@ -1,6 +1,6 @@
-# chrome-search-adapter - Chrome Extension
+# Chrome Search Adapter
 
-The `chrome-search-adapter` is a Google Chrome browser extension that provides the user with context-aware UI that allows interaction with search engine results to explore and expose additional data associated with a given search result.
+The `Chrome Search Adapter` is a Google Chrome browser extension that provides the user with context-aware UI that allows interaction with search engine results to explore and expose additional data associated with a given search result.
 
 ## Key Features
 
