@@ -3,7 +3,13 @@
   "version": "1.0.0",
   "description": "A chrome extension that provides additional data for search engine results.",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "clear:app": "rm -rf build",
+    "clear": "npm run clear:app",
+    "build:dev-app": "webpack --config webpack/webpack.dev.js",
+    "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
+    "start": "npm run build:dev-app && npm run start:dev-server"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jorgeareyesjr/chrome-search-adapter.git"
@@ -30,7 +36,8 @@
     "style-loader": "^1.2.1",
     "webpack": "^4.44.0",
     "webpack-cli": "^3.3.12",
-    "webpack-dev-server": "^3.11.0"
+    "webpack-dev-server": "^3.11.0",
+    "webpack-merge": "^5.0.9"
   },
   "dependencies": {
     "react": "^16.13.1",
