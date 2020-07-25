@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "name": "Chrome Search Adapter",
+  "description": "A chrome extension that provides additional data for search engine results.",
+  "manifest_version": 2,
+  "page_action": {
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "48": "assets/icon48.png"
+    }
+  },
+  "commands": {},
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "background": {
+    "page": "",
+    "persistent": false
+  },
+  "options_ui": {
+    "page": ""
+  },
+  "permissions": [],
+  "content_security_policy": ""
+}
