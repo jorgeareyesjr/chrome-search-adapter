@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "A chrome extension that provides additional data for search engine results.",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jorgeareyesjr/chrome-search-adapter.git"
@@ -15,5 +13,33 @@
   "bugs": {
     "url": "https://github.com/jorgeareyesjr/chrome-search-adapter/issues"
   },
-  "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme"
+  "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme",
+  "devDependencies": {
+    "@babel/core": "^7.10.5",
+    "@babel/polyfill": "^7.10.4",
+    "@babel/preset-env": "^7.10.4",
+    "@babel/preset-react": "^7.10.4",
+    "babel-loader": "^8.1.0",
+    "chrome-extension-async": "^3.4.1",
+    "css-loader": "^4.0.0",
+    "file-loader": "^6.0.0",
+    "html-webpack-plugin": "^4.3.0",
+    "less": "^3.12.2",
+    "less-loader": "^6.2.0",
+    "nodemon": "^2.0.4",
+    "style-loader": "^1.2.1",
+    "webpack": "^4.44.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "dependencies": {
+    "react": "^16.13.1",
+    "react-chrome-extension-router": "^1.1.0",
+    "react-dom": "^16.13.1",
+    "react-redux": "^7.2.0",
+    "react-router-dom": "^5.2.0",
+    "redux": "^4.0.5",
+    "redux-devtools-extension": "^2.13.8",
+    "redux-saga": "^1.1.3"
+  }
 }
