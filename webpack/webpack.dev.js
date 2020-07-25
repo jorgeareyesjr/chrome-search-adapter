@@ -15,11 +15,19 @@ const dev_app_config = {
   ]
 };
 
+const dev_extension_config = {
+  mode: 'development',
+  devtool: 'cheap-module-source-map',
+  optimization: { noEmitOnErrors: true }
+};
+
 const dev_server_config = {
   devServer: {
     contentBase: path.resolve('./', 'build'),
     compress: true,
-    port: 8080
+    historyApiFallback: true,
+    port: 8080,
+    watchContentBase: true
   }
 };
 
@@ -27,9 +35,13 @@ const dev_server_config = {
 const npm_lifecycle_event = process.env.npm_lifecycle_event;
 
 switch (npm_lifecycle_event) {
-  case 'build:dev-app':
+  case 'build:dev:app':
     console.log(`webpack.dev.js: Exporting merge(base_config, dev_app_config).`);
     module.exports = webpack_merge.merge(base_config, dev_app_config);
+    break;
+  case 'build:dev:extension':
+    console.log(`webpack.dev.js: Exporting merge(base_config, dev_extension_config).`);
+    module.exports = webpack_merge.merge(base_config, dev_extension_config);
     break;
   case 'start:dev-server':
     console.log(`webpack.dev.js: Exporting merge(base_config, dev_app_config, dev_server_config).`);
