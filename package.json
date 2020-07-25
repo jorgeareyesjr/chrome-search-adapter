@@ -10,7 +10,9 @@
     "build:dev:app": "webpack --config webpack/webpack.dev.js",
     "build:dev:extension": "NODE_ENV=development webpack --config webpack/webpack.dev.js",
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
-    "start": "npm run build:dev:app && npm run start:dev-server"
+    "start:app": "npm run build:dev:app && npm run start:dev-server",
+    "watch:extension": "nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\"",
+    "start": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension"
   },
   "repository": {
     "type": "git",
