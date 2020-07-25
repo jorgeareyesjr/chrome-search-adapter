@@ -42,13 +42,41 @@ const base_app_config = {
   }
 };
 
+const base_extension_config = {
+  entry: {
+    background: path.resolve('./', 'src/extension/background/index'),
+    content: path.resolve('./', 'src/extension/content/index'),
+    options: path.resolve('./', 'src/extension/options/index'),
+    window: path.resolve('./', 'src/extension/window/index'),
+  },
+  output: {
+    filename: '[name].bundle.js',
+    chunkFilename: '[id].chunk.js',
+    path: path.resolve('./', 'src/extension/js')
+  },
+  module: {
+    rules: [
+      resolve_image_assets,
+      transform_less,
+      transpile_js
+    ]
+  },
+  resolve: {
+    extensions: ['*', '.js', '.jsx']
+  }
+};
+
 /*** Exports ***/
 const npm_lifecycle_event = process.env.npm_lifecycle_event;
 
 switch (npm_lifecycle_event) {
-  case 'build:dev-app':
+  case 'build:dev:app':
     console.log(`webpack.config.js: Exporting (base_app_config).`);
     module.exports = base_app_config;
+    break;
+  case 'build:dev:extension':
+    console.log(`webpack.config.js: Exporting (base_extension_config).`);
+    module.exports = base_extension_config;
     break;
   case 'start:dev-server':
     console.log(`webpack.config.js: Exporting (base_app_config).`);
