@@ -1,0 +1,19 @@
+{
+  "name": "chrome-search-adapter",
+  "version": "1.0.0",
+  "description": "A chrome extension that provides additional data for search engine results.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jorgeareyesjr/chrome-search-adapter.git"
+  },
+  "author": "Jorge A. Reyes Jr.",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jorgeareyesjr/chrome-search-adapter/issues"
+  },
+  "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme"
+}
