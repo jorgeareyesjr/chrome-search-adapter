@@ -1,7 +1,7 @@
 import 'chrome-extension-async';
-
 import {
-  createMenu
+  createMenu,
+  openAdapterWindow
 } from './utils';
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -10,4 +10,10 @@ chrome.runtime.onInstalled.addListener(async () => {
   } catch (error) {
     console.log(error);
   }
+});
+
+chrome.contextMenus.onClicked.addListener(async ({ menuItemId }, tab) => {
+  await chrome.system.display.getInfo({ singleUnified: true }, async (displayInfo) => {
+      await openAdapterWindow(menuItemId, tab, displayInfo);
+  });
 });
