@@ -9,7 +9,17 @@
       "48": "assets/icon48.png"
     }
   },
-  "commands": {},
+  "commands": {
+    "000-adapter-left": {
+      "description": "To Left"
+    },
+    "001-adapter-right": {
+      "description": "To Right"
+    },
+    "002-adapter-bottom": {
+      "description": "To Bottom"
+    }
+  },
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",
@@ -23,6 +33,7 @@
     "page": "views/options.html"
   },
   "permissions": [
+    "contextMenus",
     "background"
   ],
   "content_security_policy": "script-src 'self' http://localhost:8080 https://localhost:* 'unsafe-eval'; style-src https://localhost:8080 http://localhost:* 'unsafe-inline'; object-src 'self'"
