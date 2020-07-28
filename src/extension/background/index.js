@@ -1,8 +1,5 @@
 import 'chrome-extension-async';
-import {
-  createMenu,
-  openAdapterWindow
-} from './utils';
+import { createMenu, snapWindows } from './utils';
 
 chrome.runtime.onInstalled.addListener(async () => {
   try {
@@ -14,6 +11,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.contextMenus.onClicked.addListener(async ({ menuItemId }, tab) => {
   await chrome.system.display.getInfo({ singleUnified: true }, async (displayInfo) => {
-      await openAdapterWindow(menuItemId, tab, displayInfo);
+    await snapWindows(menuItemId, tab, displayInfo);
   });
 });
