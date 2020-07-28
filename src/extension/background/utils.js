@@ -81,7 +81,14 @@ async function getActiveDisplay(displayInfo, window) {
 async function getWindowSnapPositions(command, displayDevice) {
   const { workArea } = displayDevice;
 
-  let chromeWindow, extensionWindow = {
+  const chromeWindow = {
+    left: workArea.left,
+    top: workArea.top,
+    width: workArea.width,
+    height: workArea.height,
+  };
+
+  const extensionWindow = {
     left: workArea.left,
     top: workArea.top,
     width: workArea.width,
@@ -160,7 +167,7 @@ async function snapWindows(command, tab, displayInfo) {
     await setTimeout(async () => {
       await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
       await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
-    }, 1000);
+    }, 0);
   } else {
     await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
     await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
