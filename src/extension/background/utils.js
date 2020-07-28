@@ -14,81 +14,160 @@ async function createMenu() {
 };
 
 /**
- * Identify and return the active display from the list of attached display devices.
+ * Identify and return the display device that contains the active chrome window the user is interacting with.
  * @param {array} displayInfo - An array of objects that contains the information for all attached display devices. 
- * @param {object} activeWindow - The active tab's parent window.
+ * @param {object} window - The active chrome window the user is interacting with.
  */
-async function getActiveDisplay(displayInfo, activeWindow) {
+async function getActiveDisplay(displayInfo, window) {
   let activeDisplay = null;
-
+    
   try {
-    let highestAreaDisplay = -1;
-    let highestAreaDisplayIndex = -1;
+    let index = -1; 
+    let outerBounds = -1;
 
+    // Note: When working with multiple (non-mirrored) monitors, the OS creates a "combined" coordinate space between all connected display devices.
+    // Calculate the `window` position within the "combined" coordinate space and get the logical boundaries of the display device.
     for (let i = 0; i < displayInfo.length; i++) {
-      const currentWorkArea = displayInfo[i].workArea;
+      const workArea = displayInfo[i].workArea;
 
-      // Calculate the current display's left logical bound.
-      const leftBound = activeWindow.left > currentWorkArea.left ? activeWindow.left : currentWorkArea.left;
+      const windowTop = window.top;
+      const windowRight = window.left + window.width;
+      const windowBottom = window.top + window.height;
+      const windowLeft = window.left;
 
-      // Calculate the current display's right logical bound.
-      const rightBound = activeWindow.left + activeWindow.width < currentWorkArea.left + currentWorkArea.width ?
-      activeWindow.left + activeWindow.width : currentWorkArea.left + currentWorkArea.width;
+      const workAreaTop = workArea.top;
+      const workAreaRight = workArea.left + workArea.width;
+      const workAreaBottom = workArea.top + workArea.height;
+      const workAreaLeft = workArea.left;
 
-      // Calculate the current display's top logical bound.
-      const topBound = activeWindow.top > currentWorkArea.top ? activeWindow.top : currentWorkArea.top;
+      // Calculate left bound.
+      const left = windowLeft > workAreaLeft ? windowLeft : workAreaLeft;
 
-      // Calculate the current display's bottom logical bound.
-      const bottomBound = activeWindow.top + activeWindow.height < currentWorkArea.top + currentWorkArea.height ?
-      activeWindow.top + activeWindow.height : currentWorkArea.top + currentWorkArea.height;
-      
-      // Calculate the current display's `area`.
-      const width = (rightBound - leftBound); 
-      const height = (bottomBound - topBound);
-      const area = width * height;
+      // Calculate right bound.
+      const right = windowRight < workAreaRight ? windowRight : workAreaRight;
 
-      if (area > highestAreaDisplay) {
-        highestAreaDisplay = area;
-        highestAreaDisplayIndex = i;
+      // Calculate top bound.
+      const top = windowTop > workAreaTop ? windowTop : workAreaTop;
+
+      // Calculate bottom bound.
+      const bottom =  windowBottom < workAreaBottom ? windowBottom : workAreaBottom;
+
+      // Calculate the display device size.
+      const size = (right - left) * (bottom - top); 
+
+      if (size > outerBounds) {
+        outerBounds = size;
+        index = i;
       }
     }
 
-    if (highestAreaDisplayIndex !== -1) {
-      activeDisplay = displayInfo[highestAreaDisplayIndex];
+    if (index !== -1) {
+      activeDisplay = displayInfo[index];
     }
+
+
   } catch(error) {
     console.log(error);
   }
 
   return activeDisplay;
-}
+};
 
-async function openAdapterWindow(command, activeTab, displayInfo) {
-  const activeWindow = await chrome.windows.get(activeTab.windowId);
-  const activeDisplay = await getActiveDisplay(displayInfo, activeWindow);;
+/**
+ * Calculate the "snapping" positions of the active chrome window and extension window, within the active display device bounds.
+ * @param {string} command - User-selected position to open the extension popup window.
+ * @param {object} displayDevice - The detected display device that contains the active chrome window the user is interacting with.
+ */
+async function getWindowSnapPositions(command, displayDevice) {
+  const { workArea } = displayDevice;
 
-  // TODO: Calculate new window sizes for `adapterWindow` and `parentWindow`, based off `activeDisplay.workArea` and `position`.
-  const adapterWindow = {
-    left: activeDisplay.workArea.left,
-    top: activeDisplay.workArea.top,
-    width: activeDisplay.workArea.width,
-    height: activeDisplay.workArea.height
-  };
-  const parentWindow = {
-    left: activeDisplay.workArea.left,
-    top: activeDisplay.workArea.top,
-    width: activeDisplay.workArea.width,
-    height: activeDisplay.workArea.height,
+  let chromeWindow, extensionWindow = {
+    left: workArea.left,
+    top: workArea.top,
+    width: workArea.width,
+    height: workArea.height,
   };
 
+  switch (command) {
+    case 'right':
+      extensionWindow.left = Math.floor(workArea.left + (workArea.width /2));
+      extensionWindow.width = Math.floor(workArea.width / 2);
+      chromeWindow.left = Math.floor(workArea.left);
+      chromeWindow.width = Math.floor(workArea.width / 2);;
+      break;
+    case 'bottom':
+      extensionWindow.height = Math.floor(extensionWindow.height / 2);
+      extensionWindow.top = Math.floor(extensionWindow.top + extensionWindow.height);
+      chromeWindow.top = Math.floor(workArea.top - workArea.height);
+      chromeWindow.height = Math.floor(workArea.height / 2);
+      break;
+    case 'left':
+      extensionWindow.left = Math.floor(workArea.left);
+      extensionWindow.width = Math.floor(workArea.width / 2);
+      chromeWindow.left = Math.floor(extensionWindow.left + extensionWindow.width);
+      chromeWindow.width = Math.floor(workArea.width / 2);
+      break;
+  }
+
+  let chromeWindowPosition = chromeWindow;
+  let extensionWindowPosition = extensionWindow;
+
+  return { chromeWindowPosition, extensionWindowPosition };
+};
+
+/**
+ * Open the extension popup window with the specified parameters below.
+ * @param {string} action - The behavior of the extensions popup window.
+ * @param {number} tabId - The id value of the Chrome tab that the user is interacting with.
+ * @param {string} view - The path of the extension popup window html template.
+ * @param {object} windowSize - The size parameters of the extension popup window.
+ * @param {number} parentChromeWindowId - The id of the active chrome window the user is interacting with.
+ */
+async function openExtensionWindow(action, tabId, view, windowSize, parentChromeWindowId) {
+  // TODO: Create a store to track 
+  const existingWindow = null;
+  const hash = btoa(JSON.stringify({ tabId }));
+
+  if (existingWindow) {
+    // Reselects the `existingWindow` if one is already open.
+    await chrome.windows.update(existingWindow, { focused: true, ...windowSize });
+  } else if (action === 'open') {
+    // If no `existingWindow` is detected, open a new one.
+    const url = await chrome.extension.getURL(`${view}#${hash}`);
+    const newExtensionWindow = await chrome.windows.create({ type: 'popup', url, ...windowSize });
+    await chrome.windows.update(newExtensionWindow.id, { focused: true, ...windowSize });
+  }
+
+  return existingWindow;
+};
+
+/**
+ * Open the extension popup window and resize/reposition the active chrome window accordingly.
+ * @param {string} command - The the user's selected `contentMenu` item value.
+ * @param {object} tab - The chrome tab the user is interacting with.
+ * @param {object} displayInfo - An array of objects that contains the information for all attached display devices. 
+ */
+async function snapWindows(command, tab, displayInfo) {
+  const activeChromeWindow = await chrome.windows.get(tab.windowId);
+  const activeDisplay = await getActiveDisplay(displayInfo, activeChromeWindow);
   const position = command.split('-').pop();
-  
-  // await console.log("adapterWindow: ", adapterWindow);
-  // await console.log("parentWindow: ", parentWindow);
-  // await console.log("position: ", position);
-}
+  const view = 'views/window.html';
+  const windowSnapPositions = await getWindowSnapPositions(position, activeDisplay);
+  const { chromeWindowPosition, extensionWindowPosition } = windowSnapPositions;
+
+  if (activeChromeWindow && activeChromeWindow.state === 'fullscreen') {
+    await chrome.windows.update(activeChromeWindow.id, { state: 'normal' });
+    await setTimeout(async () => {
+      await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
+      await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
+    }, 1000);
+  } else {
+    await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
+    await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
+  }
+};
 
 export {
   createMenu,
-  openAdapterWindow
+  snapWindows
 };
