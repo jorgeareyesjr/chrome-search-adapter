@@ -1,6 +1,60 @@
 import 'chrome-extension-async';
+import { store } from './index';
+import actions from './actions';
 
-/** Create the extension's `contextMenu`. */
+/**
+ * Check if extension actions that can be taken on the current page by inspecting the active tab URL - update the page action icon accordingly.
+ * @param {number} tabId - The active tab id.
+ * @param {string} url - The active tab URL.
+ */
+async function checkTabUrl(tabId, url) {
+  // TODO: Fetch these `supportedUrls` at `chrome.runtime.onInstalled`.
+  // TODO: Handle URL from other geolocations (in case user is running a VPN that the browser reflects in the URL)
+  // IDEA: Add these to default localStorage, then fetch and add to store?
+  const contextUrls = [
+    `https://duckduckgo.com`,
+    `https://www.google.com`
+  ];
+
+  const parsedUrl = new URL(url);
+  const supportedUrls = contextUrls.filter(( url ) => url.includes(parsedUrl.origin));
+  
+  supportedUrls.length > 0 ? await chrome.pageAction.show(tabId) : await chrome.pageAction.hide(tabId);;
+
+  const tab = await chrome.tabs.get(tabId);
+  const window = await chrome.windows.get(tab.windowId);
+  
+  // Update store
+  await store.dispatch(actions.setActiveTabId(tab.id));
+  await store.dispatch(actions.setActiveWindowId(window.id));
+};
+
+/**
+ * Check for previously opened extension windows associated with the active window id - If one exists, return it.
+ * @param {number} windowId - The active window id.
+ */
+async function checkActiveWindows(windowId) {
+  const state = store.getState();
+  const { activeWindows } = state;
+
+  if (activeWindows.length > 0) {
+    for (let i = 0; i < activeWindows.length; i++) {
+      let { parentWindowId, extensionWindowId } = activeWindows[i];
+
+      if (windowId === parentWindowId) {
+        return activeWindows[i];
+      };
+
+      if (windowId === extensionWindowId) {
+        return activeWindows[i];
+      };
+    };
+  };
+
+  return null;
+};
+
+/** Create the `contextMenu`. */
 async function createMenu() {
   const commands = await chrome.commands.getAll();
 
@@ -14,11 +68,11 @@ async function createMenu() {
 };
 
 /**
- * Identify and return the display device that contains the active chrome window the user is interacting with.
+ * Identify and return the display device that contains the  active window.
  * @param {array} displayInfo - An array of objects that contains the information for all attached display devices. 
- * @param {object} window - The active chrome window the user is interacting with.
+ * @param {object} window - The active window.
  */
-async function getActiveDisplay(displayInfo, window) {
+async function getActiveDisplayDevice(displayInfo, window) {
   let activeDisplay = null;
     
   try {
@@ -58,30 +112,28 @@ async function getActiveDisplay(displayInfo, window) {
       if (size > outerBounds) {
         outerBounds = size;
         index = i;
-      }
-    }
+      };
+    };
 
     if (index !== -1) {
       activeDisplay = displayInfo[index];
-    }
-
-
+    };
   } catch(error) {
     console.log(error);
-  }
+  };
 
   return activeDisplay;
 };
 
 /**
- * Calculate the "snapping" positions of the active chrome window and extension window, within the active display device bounds.
- * @param {string} command - User-selected position to open the extension popup window.
- * @param {object} displayDevice - The detected display device that contains the active chrome window the user is interacting with.
+ * Calculate the "snapping" positions of both the extension window and it's associated parent within the active display device.
+ * @param {string} position - The position to open the extension window.
+ * @param {object} displayDevice - The active display device.
  */
-async function getWindowSnapPositions(command, displayDevice) {
+async function getWindowSnapPositions(position, displayDevice) {
   const { workArea } = displayDevice;
 
-  const chromeWindow = {
+  const parentWindow = {
     left: workArea.left,
     top: workArea.top,
     width: workArea.width,
@@ -95,86 +147,112 @@ async function getWindowSnapPositions(command, displayDevice) {
     height: workArea.height,
   };
 
-  switch (command) {
+  switch (position) {
     case 'right':
       extensionWindow.left = Math.floor(workArea.left + (workArea.width /2));
       extensionWindow.width = Math.floor(workArea.width / 2);
-      chromeWindow.left = Math.floor(workArea.left);
-      chromeWindow.width = Math.floor(workArea.width / 2);;
+      parentWindow.left = Math.floor(workArea.left);
+      parentWindow.width = Math.floor(workArea.width / 2);;
       break;
     case 'bottom':
       extensionWindow.height = Math.floor(extensionWindow.height / 2);
       extensionWindow.top = Math.floor(extensionWindow.top + extensionWindow.height);
-      chromeWindow.top = Math.floor(workArea.top - workArea.height);
-      chromeWindow.height = Math.floor(workArea.height / 2);
+      parentWindow.top = Math.floor(workArea.top - workArea.height);
+      parentWindow.height = Math.floor(workArea.height / 2);
       break;
     case 'left':
       extensionWindow.left = Math.floor(workArea.left);
       extensionWindow.width = Math.floor(workArea.width / 2);
-      chromeWindow.left = Math.floor(extensionWindow.left + extensionWindow.width);
-      chromeWindow.width = Math.floor(workArea.width / 2);
+      parentWindow.left = Math.floor(extensionWindow.left + extensionWindow.width);
+      parentWindow.width = Math.floor(workArea.width / 2);
       break;
-  }
+  };
 
-  let chromeWindowPosition = chromeWindow;
+  let parentWindowPosition = parentWindow;
   let extensionWindowPosition = extensionWindow;
 
-  return { chromeWindowPosition, extensionWindowPosition };
+  return { parentWindowPosition, extensionWindowPosition };
+};
+
+/** Hydrate the background `store`. */
+async function hydrateStore() {
+  await chrome.tabs.query({ currentWindow: true, active : true }, async (tabArray) => {
+    const { id, url } = tabArray[0];
+    await checkTabUrl(id, url);
+  });
+  
+  store.subscribe(async () => {
+    await console.log('state\n', store.getState());
+  });
 };
 
 /**
- * Open the extension popup window with the specified parameters below.
- * @param {string} action - The behavior of the extensions popup window.
- * @param {number} tabId - The id value of the Chrome tab that the user is interacting with.
- * @param {string} view - The path of the extension popup window html template.
- * @param {object} windowSize - The size parameters of the extension popup window.
- * @param {number} parentChromeWindowId - The id of the active chrome window the user is interacting with.
+ * Open the extension window - If one already exists, refocus it, otherwise, open a new one.
+ * @param {number} activeTabId - The active tab id.
+ * @param {number} activeWindowId - The active window id.
+ * @param {object} activeWindowSet - The active extension windows, if applicable.
+ * @param {object} windowSize - The size parameters for opening the window.
  */
-async function openExtensionWindow(action, tabId, view, windowSize, parentChromeWindowId) {
-  // TODO: Create a store to track 
-  const existingWindow = null;
-  const hash = btoa(JSON.stringify({ tabId }));
-
-  if (existingWindow) {
-    // Reselects the `existingWindow` if one is already open.
-    await chrome.windows.update(existingWindow, { focused: true, ...windowSize });
-  } else if (action === 'open') {
-    // If no `existingWindow` is detected, open a new one.
+async function openExtensionWindow(activeTabId, activeWindowId, activeWindowSet, windowSize) {
+  async function openNewWindow() {
+    // If no `activeExtensionWindow` exists, open a `newExtensionWindow`.
+    const hash = btoa(JSON.stringify({ activeTabId }));
+    const view = 'views/window.html';
     const url = await chrome.extension.getURL(`${view}#${hash}`);
     const newExtensionWindow = await chrome.windows.create({ type: 'popup', url, ...windowSize });
-    await chrome.windows.update(newExtensionWindow.id, { focused: true, ...windowSize });
+    const { id } = newExtensionWindow;
+
+    await chrome.windows.update(id, { focused: true, ...windowSize });
+
+    // Update store
+    await store.dispatch(actions.createWindow(activeWindowId, id));
   }
 
-  return existingWindow;
+  if (activeWindowSet) {
+    // Refocus the `activeExtensionWindow`, if applicable.
+    const { parentWindowId, extensionWindowId } = activeWindowSet;
+
+    if (activeWindowId === parentWindowId) {
+      await chrome.windows.update(extensionWindowId, { focused: true, ...windowSize });
+    } else {
+      openNewWindow();
+    }
+  } else {
+    openNewWindow();
+  };
 };
 
 /**
- * Open the extension popup window and resize/reposition the active chrome window accordingly.
- * @param {string} command - The the user's selected `contentMenu` item value.
- * @param {object} tab - The chrome tab the user is interacting with.
+ * Simultaneously open the extension popup window and resize/reposition the active chrome window, according to the user-selected position.
+ * @param {string} command - The user's selected position.
  * @param {object} displayInfo - An array of objects that contains the information for all attached display devices. 
  */
-async function snapWindows(command, tab, displayInfo) {
-  const activeChromeWindow = await chrome.windows.get(tab.windowId);
-  const activeDisplay = await getActiveDisplay(displayInfo, activeChromeWindow);
-  const position = command.split('-').pop();
-  const view = 'views/window.html';
-  const windowSnapPositions = await getWindowSnapPositions(position, activeDisplay);
-  const { chromeWindowPosition, extensionWindowPosition } = windowSnapPositions;
+async function snapWindows(command, displayInfo) {
+  const state = store.getState();
+  const { activeTabId, activeWindowId } = state;
+  const activeWindow = await chrome.windows.get(activeWindowId);
+  const activeDisplayDevice = await getActiveDisplayDevice(displayInfo, activeWindow);
+  const activeWindowSet = await checkActiveWindows(activeWindowId);
 
-  if (activeChromeWindow && activeChromeWindow.state === 'fullscreen') {
-    await chrome.windows.update(activeChromeWindow.id, { state: 'normal' });
+  const position = command.split('-').pop();
+  const { parentWindowPosition, extensionWindowPosition } = await getWindowSnapPositions(position, activeDisplayDevice);
+
+  if (activeWindow && activeWindow.state === 'fullscreen') {
+    await chrome.windows.update(activeWindowId, { state: 'normal' });
     await setTimeout(async () => {
-      await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
-      await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
+      await chrome.windows.update(activeWindowId, { focused: true, ...parentWindowPosition });
+      await openExtensionWindow(activeTabId, activeWindowId, activeWindowSet, extensionWindowPosition);
     }, 0);
   } else {
-    await chrome.windows.update(activeChromeWindow.id, { focused: true, ...chromeWindowPosition });
-    await openExtensionWindow('open', tab.id, view, extensionWindowPosition, activeChromeWindow.id);
-  }
+    await chrome.windows.update(activeWindowId, { focused: true, ...parentWindowPosition });
+    await openExtensionWindow(activeTabId, activeWindowId, activeWindowSet, extensionWindowPosition);
+  };
 };
 
 export {
+  checkTabUrl,
+  checkActiveWindows,
   createMenu,
+  hydrateStore,
   snapWindows
 };
