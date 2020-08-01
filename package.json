@@ -11,8 +11,10 @@
     "build:dev:extension": "NODE_ENV=development webpack --config webpack/webpack.dev.js",
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
     "start:app": "npm run build:dev:app && npm run start:dev-server",
-    "watch:extension": "nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\"",
-    "start": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension"
+    "start:express-server": "node src/server/index.js",
+    "watch:extension": "npm run start:express-server & nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\"",
+    "start": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -24,6 +26,7 @@
     "url": "https://github.com/jorgeareyesjr/chrome-search-adapter/issues"
   },
   "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme",
+  "proxy": "http://localhost:5000/",
   "devDependencies": {
     "@babel/core": "^7.10.5",
     "@babel/polyfill": "^7.10.4",
@@ -32,11 +35,15 @@
     "babel-loader": "^8.1.0",
     "chrome-extension-async": "^3.4.1",
     "css-loader": "^4.0.0",
+    "express": "^4.17.1",
     "file-loader": "^6.0.0",
     "html-webpack-plugin": "^4.3.0",
+    "jest": "^26.2.2",
     "less": "^3.12.2",
     "less-loader": "^6.2.0",
     "nodemon": "^2.0.4",
+    "react-chrome-extension-router": "^1.1.0",
+    "redux-devtools-extension": "^2.13.8",
     "remote-redux-devtools": "^0.5.16",
     "style-loader": "^1.2.1",
     "webpack": "^4.44.0",
@@ -46,12 +53,10 @@
   },
   "dependencies": {
     "react": "^16.13.1",
-    "react-chrome-extension-router": "^1.1.0",
     "react-dom": "^16.13.1",
     "react-redux": "^7.2.0",
     "react-router-dom": "^5.2.0",
     "redux": "^4.0.5",
-    "redux-devtools-extension": "^2.13.8",
     "redux-saga": "^1.1.3"
   }
 }
