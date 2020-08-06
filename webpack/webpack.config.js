@@ -28,7 +28,8 @@ const base_app_config = {
   },
   output: {
     filename: '[name].bundle.js',
-    path: path.resolve('./', 'build')
+    path: path.resolve('./', 'build'),
+    publicPath: '/chrome-search-adapter/static/js/'
   },
   module: {
     rules: [
@@ -71,15 +72,12 @@ const npm_lifecycle_event = process.env.npm_lifecycle_event;
 
 switch (npm_lifecycle_event) {
   case 'build:dev:app':
-    console.log(`webpack.config.js: Exporting (base_app_config).`);
     module.exports = base_app_config;
     break;
   case 'build:dev:extension':
-    console.log(`webpack.config.js: Exporting (base_extension_config).`);
     module.exports = base_extension_config;
     break;
   case 'start:dev-server':
-    console.log(`webpack.config.js: Exporting (base_app_config).`);
     module.exports = base_app_config;
     break;
 };
