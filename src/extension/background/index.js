@@ -8,8 +8,8 @@ const store = createStore(reducer);
 
 chrome.runtime.onInstalled.addListener(async () => {
   try {
+    await utils.setDefaultSettings();
     await utils.createMenu();
-    await utils.hydrateStore();
   } catch (error) {
     console.log(error);
   };
@@ -96,8 +96,18 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
   };
 });
 
-// TODO: Handshake connection with extension's `background script`.
-// TODO: Handshake connection with extension's `content script`.
-console.log("backgroundScript INIT");
+/** 
+ * This section is in charge of connecting and passing data between the extension's window and background scripts.
+ * SEE: https://developer.chrome.com/extensions/messaging
+ */
+chrome.runtime.onConnect.addListener(async (port) => {
+  try {
+    if (port.name === 'extension-window-script') {
+      utils.handleWindowScriptConnection(port);
+    };
+  } catch(error) {
+    console.log(error);
+  };
+});
 
 export { store };
