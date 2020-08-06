@@ -16,3 +16,5 @@ The `Chrome Search Adapter` has a few key features, highlighted below:
 [Extensions Overview](https://developer.chrome.com/extensions/overview)
 
 [Extensions API Index](https://developer.chrome.com/extensions/api_index)
+
+[Extensions Message Passing](https://developer.chrome.com/extensions/messaging)
