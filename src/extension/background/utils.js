@@ -8,18 +8,12 @@ import actions from './actions';
  * @param {string} url - The active tab URL.
  */
 async function checkTabUrl(tabId, url) {
-  // TODO: Fetch these `supportedUrls` at `chrome.runtime.onInstalled`.
-  // TODO: Handle URL from other geolocations (in case user is running a VPN that the browser reflects in the URL)
-  // IDEA: Add these to default localStorage, then fetch and add to store?
-  const contextUrls = [
-    `https://duckduckgo.com`,
-    `https://www.google.com`
-  ];
-
-  const parsedUrl = new URL(url);
-  const supportedUrls = contextUrls.filter(( url ) => url.includes(parsedUrl.origin));
+  const state = store.getState();
+  const { supportedUrls } = state;
+  const tabUrl = new URL(url);
+  const supportedUrl = supportedUrls.filter(( url ) => url.includes(tabUrl.origin));
   
-  supportedUrls.length > 0 ? await chrome.pageAction.show(tabId) : await chrome.pageAction.hide(tabId);;
+  supportedUrl.length > 0 ? await chrome.pageAction.show(tabId) : await chrome.pageAction.hide(tabId);;
 
   const tab = await chrome.tabs.get(tabId);
   const window = await chrome.windows.get(tab.windowId);
@@ -54,7 +48,7 @@ async function checkActiveWindows(windowId) {
   return null;
 };
 
-/** Create the `contextMenu`. */
+/** Create the extension's `contextMenu`. */
 async function createMenu() {
   const commands = await chrome.commands.getAll();
 
@@ -174,16 +168,29 @@ async function getWindowSnapPositions(position, displayDevice) {
   return { parentWindowPosition, extensionWindowPosition };
 };
 
-/** Hydrate the background `store`. */
-async function hydrateStore() {
-  await chrome.tabs.query({ currentWindow: true, active : true }, async (tabArray) => {
-    const { id, url } = tabArray[0];
-    await checkTabUrl(id, url);
-  });
-  
-  store.subscribe(async () => {
-    await console.log('state\n', store.getState());
-  });
+/** Establish a long-lived connection with the extension's window script. */
+async function handleWindowScriptConnection(port) {
+  const handleDisconnect = (port) => {
+    port.onMessage.removeListener(handleMessages);
+  };
+  const handleMessages = (message) => {
+    switch (message.type) {
+      // Pass initial data to extension window script when it initializes.
+      case "REQUEST_DATA": {
+        const state = store.getState();
+        const { activeWindows, supportedUrls } = state;
+
+        port.postMessage({
+          type: "DATA_RESPONSE",
+          activeWindows,
+          supportedUrls
+        });
+        break;
+      };
+    };
+  };
+
+  port.onDisconnect.addListener(handleDisconnect);port.onMessage.addListener(handleMessages);
 };
 
 /**
@@ -222,6 +229,30 @@ async function openExtensionWindow(activeTabId, activeWindowId, activeWindowSet,
   };
 };
 
+/** Set the default settings for the extension. */
+async function setDefaultSettings() {
+  // TODO: Handle URL from other geolocations (in case user is running a VPN that the browser reflects in the URL).
+  
+  // IDEA: Fetch these from external API, then sync to localStorage.
+  const supportedUrls = [
+    `https://duckduckgo.com`,
+    `https://www.google.com`
+  ];
+
+  // Update store
+  await store.dispatch(actions.setSupportedUrls(supportedUrls));
+
+  // Inspect the active tab URL to check if extension actions that can be taken on the current page.
+  await chrome.tabs.query({ currentWindow: true, active : true }, async (tabArray) => {
+    const { id, url } = tabArray[0];
+    await checkTabUrl(id, url);
+  });
+  
+  store.subscribe(async () => {
+    await console.log('state\n', store.getState());
+  });
+};
+
 /**
  * Simultaneously open the extension popup window and resize/reposition the active chrome window, according to the user-selected position.
  * @param {string} command - The user's selected position.
@@ -253,6 +284,7 @@ export {
   checkTabUrl,
   checkActiveWindows,
   createMenu,
-  hydrateStore,
+  handleWindowScriptConnection,
+  setDefaultSettings,
   snapWindows
 };
