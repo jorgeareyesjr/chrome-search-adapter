@@ -27,7 +27,11 @@ const dev_server_config = {
     compress: true,
     historyApiFallback: true,
     port: 8080,
-    watchContentBase: true
+    // Remove webpack devServer's hot-reload functionality.
+    // This will prevent the console from generating errors from the extension adapter window (in development).
+    hot: false,
+    inline: false,
+    liveReload: false
   }
 };
 
@@ -36,15 +40,12 @@ const npm_lifecycle_event = process.env.npm_lifecycle_event;
 
 switch (npm_lifecycle_event) {
   case 'build:dev:app':
-    console.log(`webpack.dev.js: Exporting merge(base_config, dev_app_config).`);
     module.exports = webpack_merge.merge(base_config, dev_app_config);
     break;
   case 'build:dev:extension':
-    console.log(`webpack.dev.js: Exporting merge(base_config, dev_extension_config).`);
     module.exports = webpack_merge.merge(base_config, dev_extension_config);
     break;
   case 'start:dev-server':
-    console.log(`webpack.dev.js: Exporting merge(base_config, dev_app_config, dev_server_config).`);
     module.exports = webpack_merge.merge(base_config, dev_app_config, dev_server_config);
     break;
 };
