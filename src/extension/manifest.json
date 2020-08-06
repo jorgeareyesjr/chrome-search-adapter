@@ -39,5 +39,5 @@
     "system.display",
     "tabs"
   ],
-  "content_security_policy": "script-src 'self' http://localhost:8080 https://localhost:* 'unsafe-eval'; style-src https://localhost:8080 http://localhost:* 'unsafe-inline'; object-src 'self'"
+  "content_security_policy": "script-src 'self' https://localhost:* http://localhost:* 'unsafe-eval'; style-src https://localhost:* http://localhost:* 'unsafe-inline'; object-src 'self'"
 }
