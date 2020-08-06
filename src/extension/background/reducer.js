@@ -3,7 +3,8 @@ import actions from './actions';
 const initialState = {
   activeTabId: null,
   activeWindowId: null,
-  activeWindows: []
+  activeWindows: [],
+  supportedUrls: []
 };
 
 const backgroundReducer = (state = initialState, { type, payload }) => {
@@ -18,6 +19,12 @@ const backgroundReducer = (state = initialState, { type, payload }) => {
       return {
         ...state,
         activeWindowId: payload.windowId
+      }
+    };
+    case actions.SET_SUPPORTED_URLS: {
+      return {
+        ...state,
+        supportedUrls: payload.urls
       }
     };
     case actions.CREATE_WINDOW: {
@@ -36,7 +43,9 @@ const backgroundReducer = (state = initialState, { type, payload }) => {
       return {
         ...state,
         activeWindows: [
-          ...state.activeWindows.filter(windows => windows.extensionWindowId !== payload.windowId)
+          ...state.activeWindows.filter(windows => {
+            windows.extensionWindowId !== payload.windowId
+          })
         ]
       };
     };
