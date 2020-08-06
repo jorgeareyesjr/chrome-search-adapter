@@ -1,6 +1,7 @@
 const actions = {
   SET_ACTIVE_TAB_ID: 'SET_ACTIVE_TAB_ID',
   SET_ACTIVE_WINDOW_ID: 'SET_ACTIVE_WINDOW_ID',
+  SET_SUPPORTED_URLS: 'SET_SUPPORTED_URLS',
   CREATE_WINDOW: 'CREATE_WINDOW',
   DELETE_WINDOW: 'DELETE_WINDOW'
 };
@@ -19,6 +20,14 @@ const actionCreators = {
       type: actions.SET_ACTIVE_WINDOW_ID,
       payload: {
         windowId
+      }
+    };
+  },
+  setSupportedUrls(urls) {
+    return {
+      type: actions.SET_SUPPORTED_URLS,
+      payload: {
+        urls
       }
     };
   },
