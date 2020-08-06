@@ -7,14 +7,14 @@
     "clear:app": "rm -rf build",
     "clear:extension": "rm -rf src/extension/js",
     "clear": "npm run clear:app & npm run clear:extension",
-    "build:dev:app": "webpack --config webpack/webpack.dev.js",
+    "build:dev:app": "NODE_ENV=development webpack --config webpack/webpack.dev.js",
     "build:dev:extension": "NODE_ENV=development webpack --config webpack/webpack.dev.js",
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
-    "start:app": "npm run build:dev:app && npm run start:dev-server",
-    "start:express-server": "node src/server/index.js",
-    "watch:extension": "npm run start:express-server & nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\"",
-    "start": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension",
-    "test": "jest"
+    "start:app": "npm run clear:app && npm run build:dev:app && npm run start:dev-server",
+    "start:extension": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension",
+    "//TODO:start": "npm run start:app & npm run start:extension",
+    "//TODO:test": "jest",
+    "watch:extension": "nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\""
   },
   "repository": {
     "type": "git",
@@ -26,7 +26,6 @@
     "url": "https://github.com/jorgeareyesjr/chrome-search-adapter/issues"
   },
   "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme",
-  "proxy": "http://localhost:5000/",
   "devDependencies": {
     "@babel/core": "^7.10.5",
     "@babel/polyfill": "^7.10.4",
@@ -35,7 +34,6 @@
     "babel-loader": "^8.1.0",
     "chrome-extension-async": "^3.4.1",
     "css-loader": "^4.0.0",
-    "express": "^4.17.1",
     "file-loader": "^6.0.0",
     "html-webpack-plugin": "^4.3.0",
     "jest": "^26.2.2",
