@@ -1,24 +1,30 @@
 import actions from './actions';
 
 const initialState = {
-  activeTabId: null,
-  activeWindowId: null,
-  activeWindows: [],
+  activeBrowserTabId: null,
+  activeBrowserWindowId: null,
+  activeExtensionWindows: [],
   supportedUrls: []
 };
 
 const backgroundReducer = (state = initialState, { type, payload }) => {
   switch (type) {
-    case actions.SET_ACTIVE_TAB_ID: {
+    case actions.SET_ACTIVE_BROWSER_TAB_ID: {
       return {
         ...state,
-        activeTabId: payload.tabId
+        activeBrowserTabId: payload.tabId
       }
     };
-    case actions.SET_ACTIVE_WINDOW_ID: {
+    case actions.SET_ACTIVE_BROWSER_TAB_URL: {
       return {
         ...state,
-        activeWindowId: payload.windowId
+        activeBrowserTabUrl: payload.url
+      }
+    };
+    case actions.SET_ACTIVE_BROWSER_WINDOW_ID: {
+      return {
+        ...state,
+        activeBrowserWindowId: payload.windowId
       }
     };
     case actions.SET_SUPPORTED_URLS: {
@@ -27,11 +33,11 @@ const backgroundReducer = (state = initialState, { type, payload }) => {
         supportedUrls: payload.urls
       }
     };
-    case actions.CREATE_WINDOW: {
+    case actions.CREATE_EXTENSION_WINDOW: {
       return {
         ...state,
-        activeWindows: [
-          ...state.activeWindows,
+        activeExtensionWindows: [
+          ...state.activeExtensionWindows,
           {
             parentWindowId: payload.parentWindowId,
             extensionWindowId: payload.extensionWindowId
@@ -39,11 +45,11 @@ const backgroundReducer = (state = initialState, { type, payload }) => {
         ]
       };
     };
-    case actions.DELETE_WINDOW: {
+    case actions.DELETE_EXTENSION_WINDOW: {
       return {
         ...state,
-        activeWindows: [
-          ...state.activeWindows.filter(windows => {
+        activeExtensionWindows: [
+          ...state.activeExtensionWindows.filter(windows => {
             windows.extensionWindowId !== payload.windowId
           })
         ]
