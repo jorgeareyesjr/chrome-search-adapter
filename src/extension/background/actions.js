@@ -1,23 +1,32 @@
 const actions = {
-  SET_ACTIVE_TAB_ID: 'SET_ACTIVE_TAB_ID',
-  SET_ACTIVE_WINDOW_ID: 'SET_ACTIVE_WINDOW_ID',
+  SET_ACTIVE_BROWSER_TAB_ID: 'SET_ACTIVE_BROWSER_TAB_ID',
+  SET_ACTIVE_BROWSER_TAB_URL: 'SET_ACTIVE_BROWSER_TAB_URL',
+  SET_ACTIVE_BROWSER_WINDOW_ID: 'SET_ACTIVE_BROWSER_WINDOW_ID',
   SET_SUPPORTED_URLS: 'SET_SUPPORTED_URLS',
-  CREATE_WINDOW: 'CREATE_WINDOW',
-  DELETE_WINDOW: 'DELETE_WINDOW'
+  CREATE_EXTENSION_WINDOW: 'CREATE_EXTENSION_WINDOW',
+  DELETE_EXTENSION_WINDOW: 'DELETE_EXTENSION_WINDOW'
 };
 
 const actionCreators = {
-  setActiveTabId(tabId) {
+  setActiveBrowserTabId(tabId) {
     return {
-      type: actions.SET_ACTIVE_TAB_ID,
+      type: actions.SET_ACTIVE_BROWSER_TAB_ID,
       payload: {
         tabId
       }
     };
   },
-  setActiveWindowId(windowId) {
+  setActiveBrowserTabUrl(url) {
     return {
-      type: actions.SET_ACTIVE_WINDOW_ID,
+      type: actions.SET_ACTIVE_BROWSER_TAB_URL,
+      payload: {
+        url
+      }
+    };
+  },
+  setActiveBrowserWindowId(windowId) {
+    return {
+      type: actions.SET_ACTIVE_BROWSER_WINDOW_ID,
       payload: {
         windowId
       }
@@ -31,18 +40,18 @@ const actionCreators = {
       }
     };
   },
-  createWindow(parentWindowId, extensionWindowId) {
+  createExtensionWindow(parentWindowId, extensionWindowId) {
     return {
-      type: actions.CREATE_WINDOW,
+      type: actions.CREATE_EXTENSION_WINDOW,
       payload: {
         parentWindowId,
         extensionWindowId
       }
     }
   },
-  deleteWindow(windowId) {
+  deleteExtensionWindow(windowId) {
     return {
-      type: actions.DELETE_WINDOW,
+      type: actions.DELETE_EXTENSION_WINDOW,
       payload: {
         windowId
       }
