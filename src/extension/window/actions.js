@@ -1,59 +1,68 @@
 const actions = {
-  SET_ACTIVE_PARENT_WINDOW_ID: 'SET_ACTIVE_PARENT_WINDOW_ID',
-  SET_ACTIVE_TAB_ID: 'SET_ACTIVE_TAB_ID',
-  SET_ACTIVE_TAB_URL: 'SET_ACTIVE_TAB_URL',
-  SET_ACTIVE_WINDOW_ID: 'SET_ACTIVE_WINDOW_ID',
-  SET_ACTIVE_WINDOWS: 'SET_ACTIVE_WINDOWS',
-  SET_ADAPTER_WINDOW_ID: 'SET_ADAPTER_WINDOW_ID',
+  SET_ACTIVE_BROWSER_TAB_ID: 'SET_ACTIVE_TAB_ID',
+  SET_ACTIVE_BROWSER_TAB_URL: 'SET_ACTIVE_TAB_URL',
+  SET_ACTIVE_BROWSER_WINDOW_ID: 'SET_ACTIVE_WINDOW_ID',
+  SET_EXTENSION_WINDOW_ID: 'SET_EXTENSION_WINDOW_ID',
+  SET_PARENT_TAB_ID: 'SET_PARENT_TAB_ID',
+  SET_PARENT_TAB_URL: 'SET_PARENT_TAB_URL',
+  SET_PARENT_WINDOW_ID: 'SET_PARENT_WINDOW_ID',
   SET_SUPPORTED_URLS: 'SET_SUPPORTED_URLS',
 };
 
 const actionCreators = {
-  setActiveParentWindowId(activeParentWindowId) {
+  setActiveBrowserTabId(tabId) {
     return {
-      type: actions.SET_ACTIVE_PARENT_WINDOW_ID,
+      type: actions.SET_ACTIVE_BROWSER_TAB_ID,
       payload: {
-        activeParentWindowId
+        tabId
       }
     };
   },
-  setActiveTabId(activeTabId) {
+  setActiveBrowserTabUrl(tabUrl) {
     return {
-      type: actions.SET_ACTIVE_TAB_ID,
+      type: actions.SET_ACTIVE_BROWSER_TAB_URL,
       payload: {
-        activeTabId
+        tabUrl
       }
     };
   },
-  setActiveTabUrl(activeTabUrl) {
+  setActiveBrowserWindowId(windowId) {
     return {
-      type: actions.SET_ACTIVE_TAB_URL,
+      type: actions.SET_ACTIVE_BROWSER_WINDOW_ID,
       payload: {
-        activeTabUrl
+        windowId
       }
     };
   },
-  setActiveWindowId(activeWindowId) {
+  setExtensionWindowId(windowId) {
     return {
-      type: actions.SET_ACTIVE_WINDOW_ID,
+      type: actions.SET_EXTENSION_WINDOW_ID,
       payload: {
-        activeWindowId
+        windowId
       }
     };
   },
-  setActiveWindows(activeWindows) {
+  setParentTabId(tabId) {
     return {
-      type: actions.SET_ACTIVE_WINDOWS,
+      type: actions.SET_PARENT_TAB_ID,
       payload: {
-        activeWindows
+        tabId
       }
     };
   },
-  setAdapterWindowId(adapterWindowId) {
+  setParentTabUrl(tabUrl) {
     return {
-      type: actions.SET_ADAPTER_WINDOW_ID,
+      type: actions.SET_PARENT_TAB_URL,
       payload: {
-        adapterWindowId
+        tabUrl
+      }
+    };
+  },
+  setParentWindowId(windowId) {
+    return {
+      type: actions.SET_PARENT_WINDOW_ID,
+      payload: {
+        windowId
       }
     };
   },
