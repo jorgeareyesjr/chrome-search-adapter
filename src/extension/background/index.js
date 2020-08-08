@@ -15,7 +15,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   };
 });
 
-chrome.contextMenus.onClicked.addListener(async ({ menuItemId }) => {
+chrome.contextMenus.onClicked.addListener(async ({ menuItemId}) => {
   await chrome.system.display.getInfo({ singleUnified: true }, async (displayInfo) => {
     await utils.snapWindows(menuItemId, displayInfo);
   });
@@ -31,14 +31,14 @@ chrome.contextMenus.onClicked.addListener(async ({ menuItemId }) => {
 // NOTE: This will automatically activate after a new tab or window is created.
 chrome.tabs.onUpdated.addListener(async (tabId, { status }) => {
   try {
-    if (status === 'complete') {
+    if(status === 'complete') {
       const activeTab = await chrome.tabs.get(tabId);
       const { id, url } = activeTab;
 
-      if (activeTab.url) {
+      if(url) {
         await utils.checkTabUrl(id, url);
       };
-    }
+    };
   } catch (error) {
     console.log(error);
   };
@@ -51,7 +51,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
     const activeTab = await chrome.tabs.get(tabId);
     const { id, url } = activeTab;
 
-    if (activeTab.url) {
+    if(url) {
       await utils.checkTabUrl(id, url);
     };
   } catch (error) {
@@ -63,13 +63,13 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 // NOTE: This will automatically activate after a window is created/destroyed.
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   // NOTE: When preceding a switch from one chrome window to another, the `windowId` value is -1.
-  if (windowId !== -1) {
+  if(windowId !== -1) {
     try {
       const activeWindow = await chrome.windows.get(windowId, { populate: true });
       const activeTab = activeWindow.tabs.find((tab) => tab.active);
       const { id, url } = activeTab;
 
-      if (activeTab.url) {
+      if(url) {
         await utils.checkTabUrl(id, url);
       };
     } catch (error) {
@@ -80,30 +80,44 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 
 // Remove closed extension windows from `store`.
 chrome.windows.onRemoved.addListener(async (windowId) => {
-  const activeWindowSet = await utils.checkActiveWindows(windowId);
+  const activeExtensionWindow = await utils.getActiveExtensionWindow(windowId);
 
-  if (activeWindowSet) {
-    const { parentWindowId, extensionWindowId } = activeWindowSet;
+  if(activeExtensionWindow) {
+    const { parentWindowId, extensionWindowId } = activeExtensionWindow;
     
-    if (windowId === parentWindowId) {
+    if(windowId === parentWindowId) {
       // If an extension window's associated parent chrome window is closed, remove the extension window from the `store`.
       await chrome.windows.remove(extensionWindowId);
-      await store.dispatch(actions.deleteWindow(extensionWindowId));
-    } else if (windowId === extensionWindowId) {
+      await store.dispatch(actions.deleteExtensionWindow(extensionWindowId));
+    } else if(windowId === extensionWindowId) {
       // If an extension window is closed, remove the extension window entry from the `store`.
-      await store.dispatch(actions.deleteWindow(extensionWindowId));
+      await store.dispatch(actions.deleteExtensionWindow(extensionWindowId));
     };
   };
 });
 
 /** 
- * This section is in charge of connecting and passing data between the extension's window and background scripts.
+ * This section is in charge of connecting and passing data between the extension adapter window and the background script.
  * SEE: https://developer.chrome.com/extensions/messaging
  */
-chrome.runtime.onConnect.addListener(async (port) => {
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   try {
-    if (port.name === 'extension-window-script') {
-      utils.handleWindowScriptConnection(port);
+     switch (message.type) {
+      // Pass the active browser context to the extension's adapter window when it initializes.
+      case "INIT_EXTENSION_ADAPTER_WINDOW": {
+        const { activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, supportedUrls } = store.getState();
+        const parentTabId = activeBrowserTabId;
+        const parentWindowId = activeBrowserWindowId;
+
+        sendResponse({
+          activeBrowserTabUrl, 
+          parentTabId,
+          parentWindowId,
+          supportedUrls
+        });
+        
+        break;
+      };
     };
   } catch(error) {
     console.log(error);
