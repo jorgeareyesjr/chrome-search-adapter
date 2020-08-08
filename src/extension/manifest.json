@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "name": "Chrome Search Adapter",
-  "description": "A chrome extension that provides additional data for search engine results.",
+  "name": "Chrome Web Browser Adapter",
+  "description": "Provides the user with context-aware UI, while browsing the web, to connect and employ custom utilities associated with a given context.",
   "manifest_version": 2,
   "page_action": {
     "default_icon": {
@@ -37,7 +37,9 @@
     "background",
     "contextMenus",
     "system.display",
-    "tabs"
+    "tabs",
+    "http://*/",
+    "https://*/"
   ],
   "content_security_policy": "script-src 'self' https://localhost:* http://localhost:* 'unsafe-eval'; style-src https://localhost:* http://localhost:* 'unsafe-inline'; object-src 'self'"
 }
