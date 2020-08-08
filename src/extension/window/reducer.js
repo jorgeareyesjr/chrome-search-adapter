@@ -4,40 +4,46 @@ const initialState = {};
 
 const windowReducer = (state = initialState, { type, payload }) => {
   switch (type) {
-    case actions.SET_ACTIVE_PARENT_WINDOW_ID: {
+    case actions.SET_ACTIVE_BROWSER_TAB_ID: {
       return {
         ...state,
-        activeParentWindowId: payload.activeParentWindowId
+        activeBrowserTabId: payload.tabId
       }
     };
-    case actions.SET_ACTIVE_TAB_ID: {
+    case actions.SET_ACTIVE_BROWSER_TAB_URL: {
       return {
         ...state,
-        activeTabId: payload.activeTabId
+        activeBrowserTabUrl: payload.tabUrl
       }
     };
-    case actions.SET_ACTIVE_TAB_URL: {
+    case actions.SET_ACTIVE_BROWSER_WINDOW_ID: {
       return {
         ...state,
-        activeTabUrl: payload.activeTabUrl
+        activeBrowserWindowId: payload.windowId
       }
     };
-    case actions.SET_ACTIVE_WINDOW_ID: {
+    case actions.SET_EXTENSION_WINDOW_ID: {
       return {
         ...state,
-        activeWindowId: payload.activeWindowId
+        extensionWindowId: payload.windowId
       }
     };
-    case actions.SET_ACTIVE_WINDOWS: {
+    case actions.SET_PARENT_TAB_ID: {
       return {
         ...state,
-        activeWindows: payload.activeWindows
+        parentTabId: payload.tabId
       }
     };
-    case actions.SET_ADAPTER_WINDOW_ID: {
+    case actions.SET_PARENT_TAB_URL: {
       return {
         ...state,
-        adapterWindowId: payload.adapterWindowId
+        parentTabUrl: payload.tabUrl
+      }
+    };
+    case actions.SET_PARENT_WINDOW_ID: {
+      return {
+        ...state,
+        parentWindowId: payload.windowId
       }
     };
     case actions.SET_SUPPORTED_URLS: {
