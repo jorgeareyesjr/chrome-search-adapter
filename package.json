@@ -1,5 +1,5 @@
 {
-  "name": "chrome-search-adapter",
+  "name": "chrome-web-browser-adapter",
   "version": "1.0.0",
   "description": "A chrome extension that provides additional data for search engine results.",
   "main": "index.js",
@@ -12,20 +12,20 @@
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
     "start:app": "npm run clear:app && npm run build:dev:app && npm run start:dev-server",
     "start:extension": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension",
-    "//TODO:start": "npm run start:app & npm run start:extension",
+    "start": "npm run start:extension",
     "//TODO:test": "jest",
     "watch:extension": "nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\""
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jorgeareyesjr/chrome-search-adapter.git"
+    "url": "git+https://github.com/jorgeareyesjr/chrome-web-browser-adapter.git"
   },
   "author": "Jorge A. Reyes Jr.",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jorgeareyesjr/chrome-search-adapter/issues"
+    "url": "https://github.com/jorgeareyesjr/chrome-web-browser-adapter/issues"
   },
-  "homepage": "https://github.com/jorgeareyesjr/chrome-search-adapter#readme",
+  "homepage": "https://github.com/jorgeareyesjr/chrome-web-browser-adapter#readme",
   "devDependencies": {
     "@babel/core": "^7.10.5",
     "@babel/polyfill": "^7.10.4",
