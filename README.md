@@ -40,7 +40,7 @@ Congratulations! The `Chrome Web Browser Adapter` is now installed on your local
 The instructions that follow will provide the necessary steps to successfully run the `Chrome Web Browser Adapter`.
 
 1.) Open a new terminal window and navigate to the project's root directory.
-> npm run start:extension
+> npm run start
 
 ## Resources
 
