@@ -66,23 +66,23 @@ async function injectMicroApp() {
 
     microApp = 'chrome-search-adapter';
 
-    // if(supportedUrl.length > 0) {
-    //   const { host } = parsedUrl;
-    //   const split = host.split('.');
+    if(supportedUrl.length > 0) {
+      const { host } = parsedUrl;
+      const split = host.split('.');
 
-    //   switch(supportedUrl[0]) {
-    //     case "https://duckduckgo.com": {
-    //       microApp = `${split[0]}-browsing-utility`;
-    //       // http://localhost:8080/duckduckgo-browsing-utility/static/js/app.bundle.js
-    //       break;
-    //     }
-    //     case "https://www.google.com": {
-    //       microApp = `${split[1]}-browsing-utility`;
-    //       // http://localhost:8080/google-browsing-utility/static/js/app.bundle.js
-    //       break;
-    //     }
-    //   };
-    // };
+      switch(supportedUrl[0]) {
+        case "https://duckduckgo.com": {
+          microApp = `${split[0]}-browsing-utility`;
+          // http://localhost:8080/duckduckgo-browsing-utility/static/js/app.bundle.js
+          break;
+        }
+        case "https://www.google.com": {
+          microApp = `${split[1]}-browsing-utility`;
+          // http://localhost:8080/google-browsing-utility/static/js/app.bundle.js
+          break;
+        }
+      };
+    };
 
     async function clearAdapterWindowDOMBody() {
       // Remove all existing child nodes from the DOM body.
