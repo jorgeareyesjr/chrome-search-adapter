@@ -29,7 +29,7 @@ const base_app_config = {
   output: {
     filename: '[name].bundle.js',
     path: path.resolve('./', 'build'),
-    publicPath: '/chrome-search-adapter/static/js/'
+    publicPath: '/chrome-web-browser-adapter/static/js/'
   },
   module: {
     rules: [
