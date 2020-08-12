@@ -62,9 +62,8 @@ async function injectMicroApp() {
     const parsedUrl = new URL(activeBrowserTabUrl);
     const supportedUrl = supportedUrls.filter(( url ) => url.includes(parsedUrl.origin));
     
+    let development = null;
     let microApp = null;
-
-    microApp = 'chrome-search-adapter';
 
     if(supportedUrl.length > 0) {
       const { host } = parsedUrl;
@@ -77,11 +76,15 @@ async function injectMicroApp() {
           break;
         }
         case "https://www.google.com": {
+          development = 'http://localhost:3000';
           microApp = `${split[1]}-browsing-utility`;
           // http://localhost:8080/google-browsing-utility/static/js/app.bundle.js
           break;
         }
       };
+    } else {
+      development = 'http://localhost:8080';
+      microApp = `chrome-web-browser-adapter`;
     };
 
     async function clearAdapterWindowDOMBody() {
@@ -95,19 +98,56 @@ async function injectMicroApp() {
     };
     async function injectMicroAppRoot() {
       const root = await window.document.createElement('div');
-      root.id = "o-app-root";
+      root.id = "root";
       
       await window.document.body.appendChild(root);
     };
     async function injectMicroAppJS() {
-      // TODO: Test production micro-app. 
-      const script = await window.document.createElement('script');
-      const development = 'http://localhost:8080';
-      script.src = `${development}/${microApp}/static/js/app.bundle.js`;
+      switch(microApp) {
+        case "chrome-web-browser-adapter": {
+          // TODO: Publish local app into a github repo with 'gh-pages'.
+          const script = await window.document.createElement('script');
+          script.src = `${development}/${microApp}/static/js/app.bundle.js`;
+          await window.document.body.appendChild(script);
+          break;
+        }
+        case "google-browsing-utility": {
+          // NOTE: Using the "ejected" CRA js scripts that are published in github repo.
+          // NOTE: Ensure to use 'local host' scripts when in development.
 
-      await window.document.body.appendChild(script);
+          /* Local host scripts */
+          const script1 = await window.document.createElement('script');
+          const script2 = await window.document.createElement('script');
+          const script3 = await window.document.createElement('script');
+
+          script1.src = `${development}/${microApp}/static/js/bundle.js`;
+          script2.src = `${development}/${microApp}/static/js/0.chunk.js`;
+          script3.src = `${development}/${microApp}/static/js/main.chunk.js`;
+
+          await window.document.body.appendChild(script1);
+          await window.document.body.appendChild(script2);
+          await window.document.body.appendChild(script3);
+
+          /* Published scripts */
+          // const script1 = await window.document.createElement('script');
+          // const script2 = await window.document.createElement('script');
+          // const script3 = await window.document.createElement('script');
+
+          // // This inline script is required to run published app.
+          // script1.text = `!function(e){function t(t){for(var n,i,l=t[0],f=t[1],a=t[2],c=0,s=[];c<l.length;c++)i=l[c],Object.prototype.hasOwnProperty.call(o,i)&&o[i]&&s.push(o[i][0]),o[i]=0;for(n in f)Object.prototype.hasOwnProperty.call(f,n)&&(e[n]=f[n]);for(p&&p(t);s.length;)s.shift()();return u.push.apply(u,a||[]),r()}function r(){for(var e,t=0;t<u.length;t++){for(var r=u[t],n=!0,l=1;l<r.length;l++){var f=r[l];0!==o[f]&&(n=!1)}n&&(u.splice(t--,1),e=i(i.s=r[0]))}return e}var n={},o={1:0},u=[];function i(t){if(n[t])return n[t].exports;var r=n[t]={i:t,l:!1,exports:{}};return e[t].call(r.exports,r,r.exports,i),r.l=!0,r.exports}i.m=e,i.c=n,i.d=function(e,t,r){i.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:r})},i.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},i.t=function(e,t){if(1&t&&(e=i(e)),8&t)return e;if(4&t&&"object"==typeof e&&e&&e.__esModule)return e;var r=Object.create(null);if(i.r(r),Object.defineProperty(r,"default",{enumerable:!0,value:e}),2&t&&"string"!=typeof e)for(var n in e)i.d(r,n,function(t){return e[t]}.bind(null,n));return r},i.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return i.d(t,"a",t),t},i.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},i.p="/google-browsing-utility/";var l=this["webpackJsonpgoogle-browsing-utility"]=this["webpackJsonpgoogle-browsing-utility"]||[],f=l.push.bind(l);l.push=t,l=l.slice();for(var a=0;a<l.length;a++)t(l[a]);var p=f;r()}([])`;
+          // script2.src = `https://jorgeareyesjr.github.io/google-browsing-utility/static/js/2.29e963e1.chunk.js`;
+          // script3.src = `https://jorgeareyesjr.github.io/google-browsing-utility/static/js/main.e9cdc71b.chunk.js`;
+
+          // await window.document.body.appendChild(script1);
+          // await window.document.body.appendChild(script2);
+          // await window.document.body.appendChild(script3);
+
+          break;
+        }
+      }
     };
     async function injectMicroAppStore() {
+      // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other solutions.
       // TODO: Consider a broadcast channel to communicate between adapter window and injected micro-app.
       // SEE: https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel/BroadcastChannel
       // Make current store data global, to let all scripts access it.
