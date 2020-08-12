@@ -41,5 +41,5 @@
     "http://*/",
     "https://*/"
   ],
-  "content_security_policy": "script-src 'self' https://localhost:* http://localhost:* 'unsafe-eval'; style-src https://localhost:* http://localhost:* 'unsafe-inline'; object-src 'self'"
+  "content_security_policy": "default-src 'self'; script-src 'self' https://localhost:* http://localhost:* https://jorgeareyesjr.github.io 'sha256-OarVbKL+0k5jaYaVAs4snqvF9NGFQtypgT0/jxSIOQc=' 'unsafe-eval'; style-src * 'unsafe-inline'; connect-src https://jorgeareyesjr.github.io;"
 }
