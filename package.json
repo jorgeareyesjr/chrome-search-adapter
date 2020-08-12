@@ -12,7 +12,7 @@
     "start:dev-server": "webpack-dev-server --config webpack/webpack.dev.js",
     "start:app": "npm run clear:app && npm run build:dev:app && npm run start:dev-server",
     "start:extension": "npm run clear:extension && npm run build:dev:extension && npm run watch:extension",
-    "start": "npm run start:extension",
+    "start": "concurrently \"npm run start:extension\" \"npm run start:app\"",
     "//TODO:test": "jest",
     "watch:extension": "nodemon --watch src/extension --ignore src/extension/js --exec \"npm run build:dev:extension\""
   },
@@ -33,6 +33,7 @@
     "@babel/preset-react": "^7.10.4",
     "babel-loader": "^8.1.0",
     "chrome-extension-async": "^3.4.1",
+    "concurrently": "^5.3.0",
     "css-loader": "^4.0.0",
     "file-loader": "^6.0.0",
     "html-webpack-plugin": "^4.3.0",
