@@ -3,50 +3,48 @@ import { store } from './index';
 import actions from './actions';
 
 /**
- * Set inital data for the extension adapter window.
- * @param {string} activeBrowserTabUrl - The current browsing context tab url.
- * @param {number} parentTabId -The adapter window's parent tab id.
- * @param {number} parentWindowId - The adapter window's parent window id.
- * @param {array} supportedUrls - An array of the supported urls.
- */
-async function initExtensionAdapterWindow(activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls) {
-  await store.dispatch(actions.setActiveBrowserTabUrl(activeBrowserTabUrl));
-  await chrome.windows.getLastFocused({ populate: true }, async (window) => {
-    const { id } = window;
-    
-    await store.dispatch(actions.setExtensionWindowId(id));
-    await store.dispatch(actions.setParentTabId(parentTabId));
-    await store.dispatch(actions.setParentWindowId(parentWindowId));
-    await store.dispatch(actions.setSupportedUrls(supportedUrls));
-  });
-  await chrome.tabs.get(parentTabId, async (tab) => {
-    const { url } = tab;
-    await store.dispatch(actions.setParentTabUrl(url));
-  });
-};
-
-/**
- * Inject and execute the content script into the current browsing tab context.
+ * Inject and execute the extension's content script into the current browser tab context and establish a long-lived connection between the extension adapter window script and injected content script.
  * @param {number} tabId - The active browser tab id.
  * SEE: https://developer.chrome.com/extensions/content_scripts#programmatic
  * SEE: https://developer.chrome.com/extensions/tabs#method-executeScript
+ * SEE: https://developer.chrome.com/extensions/tabs#method-connect
  */
 async function injectContentScript(tabId) {
-  const { parentWindowId, supportedUrls } = await store.getState();
-  const { url , windowId } = await chrome.tabs.get(tabId);
-  const parsedUrl = new URL(url);
-  const supportedUrl = supportedUrls.includes(parsedUrl.origin) ? true : false;
+  // NOTE: The content script will initate with an event-listener that handles messages sent by the extension adapter's window.
+  await chrome.tabs.executeScript(tabId, {
+    file: 'js/content.bundle.js',
+    runAt: 'document_end'
+  }, async () => {
+    console.log('CONTENT SCRIPT INJECTED: ', tabId);
+    // TODO: Update store/broadcast channel/window, informing it that the content script has connected.
+  });
 
-  if(parentWindowId === windowId && supportedUrl) {
-    await chrome.tabs.executeScript(tabId, {
-      file: 'js/content.bundle.js',
-      runAt: 'document_end'
-    }, async () => {
-      console.log('CONTENT SCRIPT INJECTED: ', parsedUrl, tabId);
-      // TODO: Update store/broadcast channel/window, informing it that the content script has connected.
+  async function connectToContentScript() {
+    const handleDisconnect = (port) => {
+      port.onMessage.removeListener(handleMessages);
+      chrome.runtime.onConnect.removeListener(connectToAdapterWindow)
+    };
+        
+    const handleMessages = async (message) => {
+      switch (message.type) {
+        case "TEST CONNECTION SUCCESS": {
+          console.log('CONNECTED TO CONTENT SCRIPT.'); 
+          break;
+        };
+      };
+    };
+
+    const port = await chrome.tabs.connect(tabId, { name: `web-browser-adapter-window` });
+
+    port.postMessage({
+      type: "TEST CONNECTION"
     });
-  };
 
+    port.onDisconnect.addListener(handleDisconnect);
+    port.onMessage.addListener(handleMessages);
+  };
+  
+  await connectToContentScript();
   await injectMicroApp();
 };
 
@@ -174,12 +172,13 @@ async function injectMicroApp() {
 };
 
 /**
- * Check the active tab URL and update the active browsing context.
+ * Check the active tab url and update the active browsing context - If a supported url is detected, inject the content script.
  * @param {number} tabId - The active tab id.
  * @param {string} url - The active tab URL.
- * @param {string} action - The event listener that detected the browsing context update.
+ * @param {string} action - The event listener that triggered the browsing context update.
  */
 async function setActiveBrowserContext(tabId, url, action) {
+  const { parentWindowId, supportedUrls } = await store.getState();
   const tab = await chrome.tabs.get(tabId);
   const window = await chrome.windows.get(tab.windowId);
 
@@ -187,11 +186,41 @@ async function setActiveBrowserContext(tabId, url, action) {
   await store.dispatch(actions.setActiveBrowserTabUrl(url));
   await store.dispatch(actions.setActiveBrowserWindowId(window.id));
 
-  await injectContentScript(tabId);
+  const parsedUrl = new URL(url);
+  const supportedUrl = supportedUrls.includes(parsedUrl.origin) ? true : false;
+
+  if(parentWindowId === tab.windowId && supportedUrl) {
+    await injectContentScript(tabId);
+  };
+
+  await injectMicroApp();
+};
+
+/**
+ * Set inital data for the extension adapter window.
+ * @param {string} activeBrowserTabUrl - The current browsing context tab url.
+ * @param {number} parentTabId -The adapter window's parent tab id.
+ * @param {number} parentWindowId - The adapter window's parent window id.
+ * @param {array} supportedUrls - An array of the supported urls.
+ */
+async function setExtensionAdapterWindowData(activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls) {
+  await store.dispatch(actions.setActiveBrowserTabUrl(activeBrowserTabUrl));
+  await chrome.windows.getLastFocused({ populate: true }, async (window) => {
+    const { id } = window;
+    
+    await store.dispatch(actions.setExtensionWindowId(id));
+    await store.dispatch(actions.setParentTabId(parentTabId));
+    await store.dispatch(actions.setParentWindowId(parentWindowId));
+    await store.dispatch(actions.setSupportedUrls(supportedUrls));
+  });
+  await chrome.tabs.get(parentTabId, async (tab) => {
+    const { url } = tab;
+    await store.dispatch(actions.setParentTabUrl(url));
+  });
 };
 
 export {
-  initExtensionAdapterWindow,
   injectMicroApp,
   setActiveBrowserContext,
+  setExtensionAdapterWindowData
 };
