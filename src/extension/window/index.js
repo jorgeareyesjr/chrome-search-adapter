@@ -51,6 +51,27 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   };
 });
 
+// Detect when the currently focused window changes.
+// NOTE: This will automatically activate after a window is created/destroyed.
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  // NOTE: When preceding a switch from one chrome window to another, the `windowId` value is -1.
+  if(windowId !== -1) {
+    try {
+      const action = 'windows.onFocusChanged';
+      const { parentWindowId } = await store.getState();
+      const activeWindow = await chrome.windows.get(windowId, { populate: true });
+      const { id, url } = activeWindow.tabs.find((tab) => tab.active);
+
+       // Check if active tab context is within the active adapter parent window, if so, update the active context.
+      if(parentWindowId === windowId && url) {
+        await utils.setActiveBrowserContext(id, url, action);
+      };
+    } catch (error) {
+      console.log(error);
+    };
+  };
+});
+
 const main = document.createElement('div');
 document.body.appendChild(main);
 
@@ -60,7 +81,7 @@ document.body.appendChild(main);
     await chrome.runtime.sendMessage({
       type: "INIT_EXTENSION_ADAPTER_WINDOW"
     }, async ({ activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls }) => {
-      await utils.initExtensionAdapterWindow(activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls);
+      await utils.setExtensionAdapterWindowData(activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls);
 
       setTimeout(async () => {
         await render(
