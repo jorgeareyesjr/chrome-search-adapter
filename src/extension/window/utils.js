@@ -3,7 +3,7 @@ import { store } from './index';
 import actions from './actions';
 
 /**
- * Set relevant data required to initialize the extension adapter window.
+ * Set inital data for the extension adapter window.
  * @param {string} activeBrowserTabUrl - The current browsing context tab url.
  * @param {number} parentTabId -The adapter window's parent tab id.
  * @param {number} parentWindowId - The adapter window's parent window id.
@@ -26,7 +26,7 @@ async function initExtensionAdapterWindow(activeBrowserTabUrl, parentTabId, pare
 };
 
 /**
- * Inject and execute the content script into the current browsing tab context, if it is amongst the list of supported urls.
+ * Inject and execute the content script into the current browsing tab context.
  * @param {number} tabId - The active browser tab id.
  * SEE: https://developer.chrome.com/extensions/content_scripts#programmatic
  * SEE: https://developer.chrome.com/extensions/tabs#method-executeScript
@@ -37,8 +37,7 @@ async function injectContentScript(tabId) {
   const parsedUrl = new URL(url);
   const supportedUrl = supportedUrls.includes(parsedUrl.origin) ? true : false;
 
-  async function injectScript() {
-    await injectMicroApp();
+  if(parentWindowId === windowId && supportedUrl) {
     await chrome.tabs.executeScript(tabId, {
       file: 'js/content.bundle.js',
       runAt: 'document_end'
@@ -48,11 +47,7 @@ async function injectContentScript(tabId) {
     });
   };
 
-  if(parentWindowId === windowId && supportedUrl) {
-    await injectScript();
-  } else {
-    await injectMicroApp();
-  }
+  await injectMicroApp();
 };
 
 /** Inject the appropriate micro-app, based off the current browsing context. */
@@ -103,18 +98,25 @@ async function injectMicroApp() {
       await window.document.body.appendChild(root);
     };
     async function injectMicroAppJS() {
+      // NOTE: Ensure to use 'local host' scripts when in development.
+      // NOTE: Ensure to use the gh-pages published js scripts when in production.
+      // SEE: https://jorgeareyesjr.github.io/google-browsing-utility/
+
       switch(microApp) {
         case "chrome-web-browser-adapter": {
-          // TODO: Publish local app into a github repo with 'gh-pages'.
+          /* Local host scripts */
           const script = await window.document.createElement('script');
+
           script.src = `${development}/${microApp}/static/js/app.bundle.js`;
+
           await window.document.body.appendChild(script);
+
+          // TODO: Publish into a github repo using 'gh-pages'.
+          /* Published scripts */
+
           break;
         }
         case "google-browsing-utility": {
-          // NOTE: Using the "ejected" CRA js scripts that are published in github repo.
-          // NOTE: Ensure to use 'local host' scripts when in development.
-
           /* Local host scripts */
           const script1 = await window.document.createElement('script');
           const script2 = await window.document.createElement('script');
@@ -147,7 +149,7 @@ async function injectMicroApp() {
       }
     };
     async function injectMicroAppStore() {
-      // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other solutions.
+      // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other possible solutions.
       // TODO: Consider a broadcast channel to communicate between adapter window and injected micro-app.
       // SEE: https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel/BroadcastChannel
       // Make current store data global, to let all scripts access it.
