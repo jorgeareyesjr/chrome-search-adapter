@@ -103,16 +103,14 @@ chrome.windows.onRemoved.addListener(async (windowId) => {
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   try {
      switch (message.type) {
-      // Pass the active browser context to the extension's adapter window when it initializes.
+      // Pass the active browsing context to the extension's adapter window when it initializes.
       case "INIT_EXTENSION_ADAPTER_WINDOW": {
         const { activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, supportedUrls } = store.getState();
-        const parentTabId = activeBrowserTabId;
-        const parentWindowId = activeBrowserWindowId;
 
         sendResponse({
-          activeBrowserTabUrl, 
-          parentTabId,
-          parentWindowId,
+          activeBrowserTabId, // parentTabId 
+          activeBrowserTabUrl,
+          activeBrowserWindowId, // parentWindowId
           supportedUrls
         });
         
