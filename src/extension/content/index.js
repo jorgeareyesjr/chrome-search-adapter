@@ -1,21 +1,34 @@
+import * as utils from './utils';
+
 /**
- * Connect to the extension adapter's window script, whenever the content script is successfully injected.
- * @param {object} port - The connection channel used to pass messages between two separate scripts running in different browsing contexts - In this case, the extension window script and injected content script.
+ * Establish a long-lived connection to the extension's window script, whenever the content script is successfully injected.
+ * @param {object} port - The connection channel used to pass messages between the extension window script and injected content script.
+ * NOTE: The content script will initialize an event handler to receive messages from the extension's window script.
  * SEE: https://developer.chrome.com/extensions/runtime#event-onConnect
  */
-async function connectToAdapterWindow(port) {
+async function connectToWindowScript(port) {
   const handleDisconnect = () => {
     port.onMessage.removeListener(handleMessages);
-    chrome.runtime.onConnect.removeListener(connectToAdapterWindow)
+    chrome.runtime.onConnect.removeListener(connectToWindowScript)
   };
   const handleMessages = async (message) => {
     switch (message.type) {
-      case "TEST CONNECTION": {
-        console.log('CONNECTED TO WINDOW SCRIPT.');
+      case "REQUEST CURRENT URL CONTEXT": {
         port.postMessage({
-          type: "TEST CONNECTION SUCCESS"
+          type: "CURRENT URL CONTEXT RESPONSE",
+          contextUrl: window.location.href
         });      
         break;
+      };
+      case "REQUEST SEARCH RESULTS": {
+        const DOMElements = await utils.getDOMElements();
+
+        port.postMessage({
+          type: "SEARCH RESULT RESPONSE",
+          DOMElements
+        });
+
+        break;     
       };
     };
   };
@@ -24,4 +37,4 @@ async function connectToAdapterWindow(port) {
   port.onDisconnect.addListener(handleDisconnect);
 };
 
-chrome.runtime.onConnect.addListener(connectToAdapterWindow);
+chrome.runtime.onConnect.addListener(connectToWindowScript);
