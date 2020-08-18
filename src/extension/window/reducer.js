@@ -22,6 +22,12 @@ const windowReducer = (state = initialState, { type, payload }) => {
         activeBrowserWindowId: payload.windowId
       }
     };
+    case actions.SET_DOM_SEARCH_RESULTS: {
+      return {
+        ...state,
+        DOMSearchResults: payload.DOMElements
+      }
+    };
     case actions.SET_EXTENSION_WINDOW_ID: {
       return {
         ...state,
@@ -32,12 +38,6 @@ const windowReducer = (state = initialState, { type, payload }) => {
       return {
         ...state,
         parentTabId: payload.tabId
-      }
-    };
-    case actions.SET_PARENT_TAB_URL: {
-      return {
-        ...state,
-        parentTabUrl: payload.tabUrl
       }
     };
     case actions.SET_PARENT_WINDOW_ID: {
