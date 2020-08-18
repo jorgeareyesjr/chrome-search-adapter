@@ -1,13 +1,13 @@
 import React, { Fragment, useEffect } from 'react';
 import * as utils from './utils';
 
-/** The extension adapter is in charge of monitoring the active browsing context, providing the user with context-aware UI. */
-function ExtensionAdapter() {
+/** The extension's adapter is in charge of monitoring the active browsing context to provide the user with context-aware UI. */
+function Adapter() {
   useEffect(() => {
     let useEffectAborted = false;
 
     if (!useEffectAborted) {
-      utils.injectMicroApp();
+      utils.injectApp();
     };
 
     return (() => {
@@ -20,4 +20,4 @@ function ExtensionAdapter() {
   );
 };
 
-export default ExtensionAdapter;
+export default Adapter;
