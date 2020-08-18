@@ -2,82 +2,40 @@ import 'chrome-extension-async';
 import { store } from './index';
 import actions from './actions';
 
-/**
- * Inject and execute the extension's content script into the current browser tab context and establish a long-lived connection between the extension adapter window script and injected content script.
- * @param {number} tabId - The active browser tab id.
- * SEE: https://developer.chrome.com/extensions/content_scripts#programmatic
- * SEE: https://developer.chrome.com/extensions/tabs#method-executeScript
- * SEE: https://developer.chrome.com/extensions/tabs#method-connect
- */
-async function injectContentScript(tabId) {
-  // NOTE: The content script will initate with an event-listener that handles messages sent by the extension adapter's window.
-  await chrome.tabs.executeScript(tabId, {
-    file: 'js/content.bundle.js',
-    runAt: 'document_end'
-  }, async () => {
-    console.log('CONTENT SCRIPT INJECTED: ', tabId);
-    // TODO: Update store/broadcast channel/window, informing it that the content script has connected.
-  });
-
-  async function connectToContentScript() {
-    const handleDisconnect = (port) => {
-      port.onMessage.removeListener(handleMessages);
-      chrome.runtime.onConnect.removeListener(connectToAdapterWindow)
-    };
-        
-    const handleMessages = async (message) => {
-      switch (message.type) {
-        case "TEST CONNECTION SUCCESS": {
-          console.log('CONNECTED TO CONTENT SCRIPT.'); 
-          break;
-        };
-      };
-    };
-
-    const port = await chrome.tabs.connect(tabId, { name: `web-browser-adapter-window` });
-
-    port.postMessage({
-      type: "TEST CONNECTION"
-    });
-
-    port.onDisconnect.addListener(handleDisconnect);
-    port.onMessage.addListener(handleMessages);
-  };
-  
-  await connectToContentScript();
-  await injectMicroApp();
-};
-
-/** Inject the appropriate micro-app, based off the current browsing context. */
-async function injectMicroApp() {
+/** Inject the appropriate app/UI, based off the active browsing context. */
+async function injectApp() {
   try {
-    const { activeBrowserTabUrl, parentTabId, parentTabUrl, parentWindowId, extensionWindowId, supportedUrls } = await store.getState();
-    const parsedUrl = new URL(activeBrowserTabUrl);
-    const supportedUrl = supportedUrls.filter(( url ) => url.includes(parsedUrl.origin));
-    
-    let development = null;
-    let microApp = null;
+    let appName = null;
+    let appHost = null;
 
-    if(supportedUrl.length > 0) {
-      const { host } = parsedUrl;
-      const split = host.split('.');
+    const { activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, DOMSearchResults, extensionWindowId, parentTabId, parentWindowId, supportedUrls } = store.getState();
 
-      switch(supportedUrl[0]) {
-        case "https://duckduckgo.com": {
-          microApp = `${split[0]}-browsing-utility`;
-          // http://localhost:8080/duckduckgo-browsing-utility/static/js/app.bundle.js
-          break;
-        }
+    // Check if the active tab context url is amongst the list of supported urls.
+    const { host, origin } = new URL(activeBrowserTabUrl);
+    const filteredUrls = supportedUrls.filter((url) => url.includes(origin));
+
+    // Inject the appropriate app if a supported url is detected.
+    if(filteredUrls.length) {
+      const hostComponent = host.split('.');
+
+      switch(origin) {
+        // TODO
+        // case "https://duckduckgo.com": {
+        //   appName = `${hostComponent[0]}-browsing-utility`;
+        //   appHost = `http://localhost:3000`;
+          
+        //   break;
+        // }
         case "https://www.google.com": {
-          development = 'http://localhost:3000';
-          microApp = `${split[1]}-browsing-utility`;
-          // http://localhost:8080/google-browsing-utility/static/js/app.bundle.js
+          appName = `${hostComponent[1]}-browsing-utility`;
+          appHost = `http://localhost:3000`;
+
           break;
         }
       };
     } else {
-      development = 'http://localhost:8080';
-      microApp = `chrome-web-browser-adapter`;
+      appName = `chrome-web-browser-adapter`;
+      appHost = `http://localhost:8080`;
     };
 
     async function clearAdapterWindowDOMBody() {
@@ -89,44 +47,45 @@ async function injectMicroApp() {
       // NOTE: `textContent` gets the content of all elements, including <script> and <style> elements.
       window.document.body.textContent = '';
     };
-    async function injectMicroAppRoot() {
+    async function injectAppRoot() {
       const root = await window.document.createElement('div');
       root.id = "root";
-      
-      await window.document.body.appendChild(root);
+
+      await window.document.body.appendChild(root);;
     };
-    async function injectMicroAppJS() {
-      // NOTE: Ensure to use 'local host' scripts when in development.
+    async function injectAppScripts() {
+      // NOTE: Ensure to use 'localhost' scripts when in development.
       // NOTE: Ensure to use the gh-pages published js scripts when in production.
       // SEE: https://jorgeareyesjr.github.io/google-browsing-utility/
-
-      switch(microApp) {
+      switch(appName) {
         case "chrome-web-browser-adapter": {
-          /* Local host scripts */
+          /* Localhost scripts */
           const script = await window.document.createElement('script');
 
-          script.src = `${development}/${microApp}/static/js/app.bundle.js`;
+          script.src = `${appHost}/${appName}/static/js/app.bundle.js`;
 
           await window.document.body.appendChild(script);
 
           // TODO: Publish into a github repo using 'gh-pages'.
           /* Published scripts */
-
           break;
         }
         case "google-browsing-utility": {
-          /* Local host scripts */
+          /* Localhost scripts */
           const script1 = await window.document.createElement('script');
           const script2 = await window.document.createElement('script');
           const script3 = await window.document.createElement('script');
+          const script4 = await window.document.createElement('script');
 
-          script1.src = `${development}/${microApp}/static/js/bundle.js`;
-          script2.src = `${development}/${microApp}/static/js/0.chunk.js`;
-          script3.src = `${development}/${microApp}/static/js/main.chunk.js`;
+          script1.src = `${appHost}/${appName}/static/js/bundle.js`;
+          script2.src = `${appHost}/${appName}/static/js/0.chunk.js`;
+          script3.src = `${appHost}/${appName}/static/js/1.chunk.js`;
+          script4.src = `${appHost}/${appName}/static/js/main.chunk.js`;
 
           await window.document.body.appendChild(script1);
           await window.document.body.appendChild(script2);
           await window.document.body.appendChild(script3);
+          await window.document.body.appendChild(script4);
 
           /* Published scripts */
           // const script1 = await window.document.createElement('script');
@@ -144,35 +103,114 @@ async function injectMicroApp() {
 
           break;
         }
-      }
+      };
     };
-    async function injectMicroAppStore() {
+    async function injectAppStore() {
       // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other possible solutions.
       // TODO: Consider a broadcast channel to communicate between adapter window and injected micro-app.
       // SEE: https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel/BroadcastChannel
       // Make current store data global, to let all scripts access it.
       // SEE: https://javascript.info/global-object
       window.__CHROME_WEB_BROWSER_ADAPTER__ = {
+        activeBrowserTabId,
         activeBrowserTabUrl,
-        parentTabId,
-        parentTabUrl,
-        parentWindowId,
+        activeBrowserWindowId,
+        DOMSearchResults,
         extensionWindowId,
+        parentTabId,
+        parentWindowId,
         supportedUrls
       };
     };
 
     await clearAdapterWindowDOMBody();
-    await injectMicroAppRoot();
-    await injectMicroAppJS();
-    await injectMicroAppStore();
+    await injectAppRoot();
+    await injectAppScripts();
+    await injectAppStore();
   } catch(error) {
     console.log(error);
   };
 };
 
 /**
- * Check the active tab url and update the active browsing context - If a supported url is detected, inject the content script.
+ * Inject and execute the extension's content script into the current browser tab and establish a long-lived connection between the window script and content script.
+ * @param {number} tabId - The active browser tab id.
+ * SEE: https://developer.chrome.com/extensions/content_scripts#programmatic
+ * SEE: https://developer.chrome.com/extensions/tabs#method-executeScript
+ * SEE: https://developer.chrome.com/extensions/tabs#method-connect
+ */
+async function injectContentScript(tabId) {
+  // NOTE: Attach the long-lived connection port to the extension adapter's window object as a global variable, this will allow the adapter to easily track existing port(s) and prevent creating duplicates.
+  // SEE: https://javascript.info/global-object
+  try {
+    // Disconnect any existing adapter window port(s), if applicable, to prevent creating duplicates.
+    if (window.__CHROME_WEB_BROWSER_ADAPTER_PORT__) {
+      await  window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.disconnect();
+      window.__CHROME_WEB_BROWSER_ADAPTER_PORT__ = null;
+    };
+
+    // Inject the content script into the current browsing tab context, initializing a long-lived communication port with the content script.
+    await chrome.tabs.executeScript(tabId, {
+      file: 'js/content.bundle.js',
+      runAt: 'document_end'
+    });
+
+    async function handleAdapterPortConnection() {
+      const handleDisconnect = () => {
+        window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.onMessage.removeListener(handleMessages);
+      };
+            
+      const handleMessages = async (message) => {;
+        switch(message.type) {
+          case "CURRENT URL CONTEXT RESPONSE": {
+            const url = new URL(message.contextUrl);
+
+            // Detect if the current context will yield DOM search result DOM nodes.
+            if(url.pathname === '/search') {
+              // Send a message to the content script requesting the search results from the current context DOM.
+              await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                type: "REQUEST SEARCH RESULTS"
+              });
+            } else {
+              // This context will not yield any DOM search result DOM nodes - clean up any previous node references on context changes.
+              await store.dispatch(actions.setDOMSearchResults(null));
+
+              await injectApp();
+            };
+
+            break;
+          };
+          case "SEARCH RESULT RESPONSE": {
+            const { DOMElements } = message;
+
+            await store.dispatch(actions.setDOMSearchResults(DOMElements));
+            await injectApp();
+
+            break;
+          };
+        };
+      };
+
+      window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.onDisconnect.addListener(handleDisconnect);
+      window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.onMessage.addListener(handleMessages);
+    };
+
+    // Establish a long-lived connection to the content script.
+    window.__CHROME_WEB_BROWSER_ADAPTER_PORT__ = await chrome.tabs.connect(tabId, { name: `chrome-web-browser-adapter-port` });
+
+    await handleAdapterPortConnection();
+
+    // Send a message to the content script requesting the active url context, using the long-lived connection port attached to the adapter window.
+    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+      type: "REQUEST CURRENT URL CONTEXT"
+    });
+  } catch (error) {
+    console.log(error);
+  };
+};
+
+/**
+ * Check the active tab url and update the active browsing context - If a supported url is detected, inject the extension's content script.
  * @param {number} tabId - The active tab id.
  * @param {string} url - The active tab URL.
  * @param {string} action - The event listener that triggered the browsing context update.
@@ -186,41 +224,57 @@ async function setActiveBrowserContext(tabId, url, action) {
   await store.dispatch(actions.setActiveBrowserTabUrl(url));
   await store.dispatch(actions.setActiveBrowserWindowId(window.id));
 
-  const parsedUrl = new URL(url);
-  const supportedUrl = supportedUrls.includes(parsedUrl.origin) ? true : false;
+  const { origin } = new URL(url);
+  const supportedUrlDetected = supportedUrls.includes(origin) ? true : false;
 
-  if(parentWindowId === tab.windowId && supportedUrl) {
+  if(parentWindowId === tab.windowId && supportedUrlDetected) {
     await injectContentScript(tabId);
+  } else {
+    await injectApp();
   };
+};
 
-  await injectMicroApp();
+/** Set the active browsing content tab id. */
+async function setActiveBrowserTabId(id) {
+  await store.dispatch(actions.setActiveBrowserTabId(id));
+};
+
+/** Set the active browsing content tab url. */
+async function setActiveBrowserTabUrl(url) {
+  await store.dispatch(actions.setActiveBrowserTabUrl(url));
 };
 
 /**
- * Set inital data for the extension adapter window.
- * @param {string} activeBrowserTabUrl - The current browsing context tab url.
- * @param {number} parentTabId -The adapter window's parent tab id.
- * @param {number} parentWindowId - The adapter window's parent window id.
- * @param {array} supportedUrls - An array of the supported urls.
+ * Set the active adapter window's "identity".
+ * @param {number} tabId -The adapter window's parent tab id.
+ * @param {number} windowId - The adapter window's parent window id.
  */
-async function setExtensionAdapterWindowData(activeBrowserTabUrl, parentTabId, parentWindowId, supportedUrls) {
-  await store.dispatch(actions.setActiveBrowserTabUrl(activeBrowserTabUrl));
+async function setAdapterIdentity(tabId, windowId) {
+  // Identify the adapter window's own window id.
   await chrome.windows.getLastFocused({ populate: true }, async (window) => {
     const { id } = window;
-    
+
     await store.dispatch(actions.setExtensionWindowId(id));
-    await store.dispatch(actions.setParentTabId(parentTabId));
-    await store.dispatch(actions.setParentWindowId(parentWindowId));
-    await store.dispatch(actions.setSupportedUrls(supportedUrls));
   });
-  await chrome.tabs.get(parentTabId, async (tab) => {
-    const { url } = tab;
-    await store.dispatch(actions.setParentTabUrl(url));
-  });
+  
+  // Identify the adapter window's parent details.
+  await store.dispatch(actions.setParentTabId(tabId));
+  await store.dispatch(actions.setParentWindowId(windowId));
+};
+
+/**
+ * Set the default supported urls for the extension adapter window.
+ * @param {array} urls - An array of the supported urls.
+ */
+async function setSupportedUrls(urls) {
+  await store.dispatch(actions.setSupportedUrls(urls));
 };
 
 export {
-  injectMicroApp,
+  injectApp,
   setActiveBrowserContext,
-  setExtensionAdapterWindowData
+  setActiveBrowserTabId,
+  setActiveBrowserTabUrl,
+  setAdapterIdentity,
+  setSupportedUrls
 };
