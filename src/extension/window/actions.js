@@ -2,9 +2,9 @@ const actions = {
   SET_ACTIVE_BROWSER_TAB_ID: 'SET_ACTIVE_TAB_ID',
   SET_ACTIVE_BROWSER_TAB_URL: 'SET_ACTIVE_TAB_URL',
   SET_ACTIVE_BROWSER_WINDOW_ID: 'SET_ACTIVE_WINDOW_ID',
+  SET_DOM_SEARCH_RESULTS: 'SET_DOM_SEARCH_RESULTS',
   SET_EXTENSION_WINDOW_ID: 'SET_EXTENSION_WINDOW_ID',
   SET_PARENT_TAB_ID: 'SET_PARENT_TAB_ID',
-  SET_PARENT_TAB_URL: 'SET_PARENT_TAB_URL',
   SET_PARENT_WINDOW_ID: 'SET_PARENT_WINDOW_ID',
   SET_SUPPORTED_URLS: 'SET_SUPPORTED_URLS',
 };
@@ -34,6 +34,14 @@ const actionCreators = {
       }
     };
   },
+  setDOMSearchResults(DOMElements) {
+    return {
+      type: actions.SET_DOM_SEARCH_RESULTS,
+      payload: {
+        DOMElements
+      }
+    };
+  },
   setExtensionWindowId(windowId) {
     return {
       type: actions.SET_EXTENSION_WINDOW_ID,
@@ -47,14 +55,6 @@ const actionCreators = {
       type: actions.SET_PARENT_TAB_ID,
       payload: {
         tabId
-      }
-    };
-  },
-  setParentTabUrl(tabUrl) {
-    return {
-      type: actions.SET_PARENT_TAB_URL,
-      payload: {
-        tabUrl
       }
     };
   },
