@@ -198,7 +198,8 @@ async function setDefaultSettings() {
   // TODO: Handle URL from other geolocations (in case user is running a VPN that the browser reflects in the URL).
   // IDEA: Fetch these from external API, then sync to localStorage.
   const supportedUrls = [
-    `https://duckduckgo.com`,
+    // TODO
+    // `https://duckduckgo.com`,
     `https://www.google.com`
   ];
 
