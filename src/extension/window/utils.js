@@ -8,8 +8,9 @@ async function injectApp() {
     let appName = null;
     let appHost = null;
 
-    const { activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, DOMSearchResults, extensionWindowId, parentTabId, parentWindowId, supportedUrls } = store.getState();
-
+    const appState = store.getState();
+    const { activeBrowserTabUrl, supportedUrls } = appState;
+    
     // Check if the active tab context url is amongst the list of supported urls.
     const { host, origin } = new URL(activeBrowserTabUrl);
     const filteredUrls = supportedUrls.filter((url) => url.includes(origin));
@@ -20,12 +21,13 @@ async function injectApp() {
 
       switch(origin) {
         // TODO
-        // case "https://duckduckgo.com": {
-        //   appName = `${hostComponent[0]}-browsing-utility`;
-        //   appHost = `http://localhost:3000`;
+        case "https://duckduckgo.com": {
+          // appName = `${hostComponent[0]}-browsing-utility`;
+          appName = `google-browsing-utility`;
+          appHost = `http://localhost:3000`;
           
-        //   break;
-        // }
+          break;
+        }
         case "https://www.google.com": {
           appName = `${hostComponent[1]}-browsing-utility`;
           appHost = `http://localhost:3000`;
@@ -105,28 +107,21 @@ async function injectApp() {
         }
       };
     };
-    async function injectAppStore() {
-      // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other possible solutions.
+    async function injectAppState() {
+      // NOTE: This will only attach to the extension adapter window, not accessible to other windows. Consider other possible solutions to communicate/broadcast updates.
       // TODO: Consider a broadcast channel to communicate between adapter window and injected micro-app.
       // SEE: https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel/BroadcastChannel
       // Make current store data global, to let all scripts access it.
       // SEE: https://javascript.info/global-object
       window.__CHROME_WEB_BROWSER_ADAPTER__ = {
-        activeBrowserTabId,
-        activeBrowserTabUrl,
-        activeBrowserWindowId,
-        DOMSearchResults,
-        extensionWindowId,
-        parentTabId,
-        parentWindowId,
-        supportedUrls
+        ...appState
       };
     };
 
     await clearAdapterWindowDOMBody();
     await injectAppRoot();
     await injectAppScripts();
-    await injectAppStore();
+    await injectAppState();
   } catch(error) {
     console.log(error);
   };
@@ -160,30 +155,171 @@ async function injectContentScript(tabId) {
         window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.onMessage.removeListener(handleMessages);
       };
             
-      const handleMessages = async (message) => {;
+      const handleMessages = async (message) => {
         switch(message.type) {
-          case "CURRENT URL CONTEXT RESPONSE": {
-            const url = new URL(message.contextUrl);
+          case "CONTEXT_URL_RESPONSE": {
+            // Determine if the current `contextUrl` will yield relevant DOM nodes.
+            const { payload } = message;
+            const { contextUrl } = payload;
+            const { origin, pathname, hash } = new URL(contextUrl);
+            
+            if(origin === 'https://www.google.com') {
+              const splitHash = hash.split("/m/");
+              // Split the url hash to determine the context for the Google flights search support.
+              // The `splitHash` will have either 1, 3 or 5 substring(s):
+              // If 1 substring, the user is in the `GOOGLE FLIGHTS SEARCH` page, without an origin airport input.
+              // If 3 substrings, the user is in the `GOOGLE FLIGHTS SEARCH` page, with an origin airport input.
+              // If 5 substrings, the user may be in either the `GOOGLE FLIGHTS SEARCH` or `GOOGLE FLIGHTS SELECTION` page - another check is necessary to assign a `pageType`.
 
-            // Detect if the current context will yield DOM search result DOM nodes.
-            if(url.pathname === '/search') {
-              // Send a message to the content script requesting the search results from the current context DOM.
-              await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
-                type: "REQUEST SEARCH RESULTS"
-              });
+              if(pathname === '/') {
+                await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                  type: "GOOGLE_SEARCH_INPUT_REQUEST"
+                });
+              } else if(pathname === '/search') {
+                await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                  type: "GOOGLE_SEARCH_RESULTS_REQUEST"
+                });
+              } else if((pathname === '/flights/' || pathname === '/flights') && splitHash.length < 5) {
+               await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                 type: "GOOGLE_FLIGHTS_SEARCH_DETAILS_REQUEST",
+                 hash
+                });
+              } else if(pathname === '/flights' && splitHash.length === 5) {
+                // The user may be in either the `GOOGLE FLIGHTS SELECTION`, `GOOGLE FLIGHTS BOOKING`, or `GOOGLE FLIGHTS CHECKOUT` page - check the `splitHash` substrings to assign the proper `pageType`.
+                // The 2nd `splitHash` substring contains departing flight data (date and flight selection details).
+                // The 4th `splitHash` substring contains returning flight data (date and flight selection details).
+                const departingFlight = splitHash[2].split(".");
+                const returningFlight = splitHash[4].split(".");
+                
+                if(returningFlight[6]) {
+                  // If flights have been selected and booked, the 4th `splitHash` substring will contain flight checkout data and can be split.
+                  // Split the flight checkout data to extract the `bookedFlights` checkout details.
+                  const bookedFlights = returningFlight[6].split(":");
+
+                  if(bookedFlights[2]) {
+                     // In the `GOOGLE FLIGHTS CHECKOUT` page.
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_REQUEST",
+                      hash
+                    });
+                  } else {
+                    // If a departing or returning flight has been selected, the 2nd and 4th `splitHash` substrings can be split with "~", otherwise, the flights have not been selected.
+                    const departingFlightData = departingFlight[2].split("~");
+                    const returningFlightData = returningFlight[2].split("~");
+                    
+                    if(departingFlightData[1] && returningFlightData[1]) {
+                      await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                        type: "GOOGLE_FLIGHTS_BOOKING_DETAILS_REQUEST",
+                        hash
+                      });
+                    } else {
+                      await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                        type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                        hash
+                      });
+                    };
+                  };
+                } else if(departingFlight[2] && returningFlight[2]) {
+                  // If a departing or returning flight has been selected.
+                  // The 2nd and 4th `splitHash` substrings can be split with "~".
+                  const departingFlightData = departingFlight[2].split("~");
+                  const returningFlightData = returningFlight[2].split("~");
+                  
+                  if(departingFlightData[1] && returningFlightData[1]) {
+                    // Both the departing flight and returning flight has been selected.
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_BOOKING_DETAILS_REQUEST",
+                      hash
+                    });
+                  } else {
+                    // Flights are being selected.
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                      hash
+                    });
+                  };
+                } else {
+                  // Flights have not been selected.
+                  await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                    type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                    hash
+                  });
+                };
+              };
+              // TODO
+              // else if (url.pathname === '/travel/explore') {}
             } else {
-              // This context will not yield any DOM search result DOM nodes - clean up any previous node references on context changes.
-              await store.dispatch(actions.setDOMSearchResults(null));
-
+              // This context will not yield any DOM search result nodes - clean up any previously set DOM data.
+              await store.dispatch(actions.clearDOMData(null));
               await injectApp();
             };
 
             break;
           };
-          case "SEARCH RESULT RESPONSE": {
-            const { DOMElements } = message;
+          case "GOOGLE_SEARCH_INPUT_RESPONSE": {
+            const { pageType, payload } = message;
+            const { searchInput } = payload;
+            
+            await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMSearchInputTerm(searchInput));
+            await injectApp();
 
-            await store.dispatch(actions.setDOMSearchResults(DOMElements));
+            break;
+          };
+          case "GOOGLE_SEARCH_RESULTS_RESPONSE": {
+            const { pageType, payload } = message;
+            const { searchInput, searchResults } = payload;
+
+            await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMSearchInputTerm(searchInput));
+            await store.dispatch(actions.setDOMSearchResults(searchResults));
+            await injectApp();
+
+            break;
+          };
+          case "GOOGLE_FLIGHTS_SEARCH_DETAILS_RESPONSE": {
+            const { pageType, payload } = message;
+            const { origin, destination, searchResults } = payload;
+
+            await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMFlightOrigin(origin));
+            await store.dispatch(actions.setDOMFlightDestination(destination));
+            await store.dispatch(actions.setDOMSearchResults(searchResults));
+            await injectApp();
+
+            break;
+          };
+          case "GOOGLE_FLIGHTS_SELECTION_DETAILS_RESPONSE": {
+            const { pageType, payload } = message;
+            const { origin, destination, searchResults } = payload;
+
+            await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMFlightOrigin(origin));
+            await store.dispatch(actions.setDOMFlightDestination(destination));
+            await store.dispatch(actions.setDOMSearchResults(searchResults));
+            await injectApp();
+
+            break;
+          };
+          case "GOOGLE_FLIGHTS_BOOKING_DETAILS_RESPONSE": {
+            const { pageType, payload } = message;
+            const { origin, destination, selectedFlights, searchResults } = payload;
+
+            await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMFlightOrigin(origin));
+            await store.dispatch(actions.setDOMFlightDestination(destination));
+            await store.dispatch(actions.setDOMSearchResults(searchResults));
+            await store.dispatch(actions.setDOMSelectedFlights(selectedFlights));
+
+            await injectApp();
+
+            break;
+          };
+          case "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_RESPONSE": {
+            // TODO
+            const { pageType } = message;
+
+            await store.dispatch(actions.setPageType(pageType));
             await injectApp();
 
             break;
@@ -202,7 +338,7 @@ async function injectContentScript(tabId) {
 
     // Send a message to the content script requesting the active url context, using the long-lived connection port attached to the adapter window.
     await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
-      type: "REQUEST CURRENT URL CONTEXT"
+      type: "CONTEXT_URL_REQUEST"
     });
   } catch (error) {
     console.log(error);
