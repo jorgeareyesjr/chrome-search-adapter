@@ -12,23 +12,130 @@ async function connectToWindowScript(port) {
     chrome.runtime.onConnect.removeListener(connectToWindowScript)
   };
   const handleMessages = async (message) => {
+    // TODO: Set up mutation observers to monitor DOM nodes and update them if changes are detected.
+    // TODO: Create an "options" page to handle adding/removing `selectors`.
+    // TODO: Get flight date(s).
     switch (message.type) {
-      case "REQUEST CURRENT URL CONTEXT": {
+      case "CONTEXT_URL_REQUEST": {
+        const contextUrl = window.location.href;
+
         port.postMessage({
-          type: "CURRENT URL CONTEXT RESPONSE",
-          contextUrl: window.location.href
+          type: "CONTEXT_URL_RESPONSE",
+          payload: { contextUrl }
         });      
         break;
       };
-      case "REQUEST SEARCH RESULTS": {
-        const DOMElements = await utils.getDOMElements();
+      case "GOOGLE_SEARCH_INPUT_REQUEST": {
+        const inputSelector = `input.gsfi`;
+        const searchInput = await utils.getDOMNodeValue(inputSelector);
 
         port.postMessage({
-          type: "SEARCH RESULT RESPONSE",
-          DOMElements
+          type: "GOOGLE_SEARCH_INPUT_RESPONSE",
+          pageType: "GOOGLE_SEARCH",
+          payload: { searchInput }
+        });
+        break;     
+      };
+      case "GOOGLE_SEARCH_RESULTS_REQUEST": {
+        const inputSelector = `input.gsfi`;
+        const resultsSelector = `.r`;
+        const searchInput = await utils.getDOMNodeValue(inputSelector);
+        const searchResults = await utils.getDOMNodes(resultsSelector);
+
+        port.postMessage({
+          type: "GOOGLE_SEARCH_RESULTS_RESPONSE",
+          pageType: "GOOGLE_SEARCH_RESULTS",
+          payload: { searchInput, searchResults }
         });
 
         break;     
+      };
+      case "GOOGLE_FLIGHTS_SEARCH_DETAILS_REQUEST": {
+        const { hash } = message;
+        const splitHash = hash.split("/m/");
+
+        const originSelector = `[data-flt-ve="origin_airport"]`;
+        const destinationSelector = `[data-flt-ve="destination_airport"]`;
+
+        const origin = await utils.getDOMNodeText(originSelector);
+        const destination = await utils.getDOMNodeText(destinationSelector);
+
+        let resultsSelector;
+        let searchResults;
+
+        if(splitHash.length < 3) {
+          resultsSelector = ".gws-flights-results__originless";
+          searchResults = await utils.getDOMNodes(resultsSelector);
+        } else if(splitHash.length === 3) {
+          if(origin && (destination.includes("Try") || destination === "Where to?")) {
+            resultsSelector = `.gws-flights-results__destination-result-button`;
+            searchResults = await utils.getDOMNodes(resultsSelector);
+          } else {
+            resultsSelector = `.gws-flights-results__select-header.gws-flights__flex-filler`;
+            searchResults = await utils.getDOMNodes(resultsSelector);
+          };
+        };
+
+        port.postMessage({
+          type: "GOOGLE_FLIGHTS_SEARCH_DETAILS_RESPONSE",
+          pageType: "GOOGLE_FLIGHTS_SEARCH",
+          payload: { origin, destination, searchResults }
+        });
+
+        break;     
+      };
+      case "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST": {
+        const originSelector = `[data-flt-ve="origin_airport"]`;
+        const destinationSelector = `[data-flt-ve="destination_airport"]`;
+
+        const origin = await utils.getDOMNodeText(originSelector);
+        const destination = await utils.getDOMNodeText(destinationSelector);
+
+        let resultsSelector;
+        let searchResults;
+
+        if(origin && (destination.includes("Try") || destination === "Where to?")) {
+          resultsSelector = `.gws-flights-results__destination-result-button`;
+          searchResults = await utils.getDOMNodes(resultsSelector);
+        } else {
+          resultsSelector = `.gws-flights-results__select-header.gws-flights__flex-filler`;
+          searchResults = await utils.getDOMNodes(resultsSelector);
+        };
+
+        port.postMessage({
+          type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_RESPONSE",
+          pageType: "GOOGLE_FLIGHTS_SELECTION",
+          payload: { origin, destination, searchResults }
+        });
+        break;     
+      };
+      case "GOOGLE_FLIGHTS_BOOKING_DETAILS_REQUEST": {
+        const originSelector = `.gws-flights__flex-box .gws-flights-book__round-trip .gws-flights__flex-shrink`;
+        const destinationSelector = `.gws-flights__flex-box .gws-flights-book__round-trip .gws-flights-book__destination-airport`;
+        const resultsSelector = `.gws-flights-book__booking-options tr`;
+        const selectedFlightsSelector = `.gws-flights-results__selections-list .gws-flights-results__slice-selection`;
+
+        const origin = await utils.getDOMNodeText(originSelector);
+        const destination = await utils.getDOMNodeText(destinationSelector);
+        const searchResults = await utils.getDOMNodes(resultsSelector);
+        const selectedFlights = await utils.getDOMNodes(selectedFlightsSelector);
+
+        port.postMessage({
+          type: "GOOGLE_FLIGHTS_BOOKING_DETAILS_RESPONSE",
+          pageType: "GOOGLE_FLIGHTS_BOOKING",
+          payload: { origin, destination, searchResults, selectedFlights }
+        });
+        break;  
+      };
+      case "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_REQUEST": {
+        // TODO
+        // console.log("IN FLIGHTS CHECKOUT");
+
+        port.postMessage({
+          type: "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_RESPONSE",
+          pageType: "GOOGLE_FLIGHTS_CHECKOUT",
+        });
+        break;  
       };
     };
   };
