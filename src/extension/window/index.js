@@ -61,8 +61,10 @@ document.body.appendChild(main);
   try {
     await chrome.runtime.sendMessage({
       type: "INIT_EXTENSION_ADAPTER_WINDOW"
-    }, async ({ activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, supportedUrls }) => {
+    }, async (contextData) => {
       // Receive data from the background script and pass to the adapter as it initializes.
+      const { activeBrowserTabId, activeBrowserTabUrl, activeBrowserWindowId, supportedUrls } = contextData;
+      
       await utils.setAdapterIdentity(activeBrowserTabId, activeBrowserWindowId);
       await utils.setSupportedUrls(supportedUrls);
       await utils.setActiveBrowserContext(activeBrowserTabId, activeBrowserTabUrl, "INIT");
