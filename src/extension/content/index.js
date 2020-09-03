@@ -54,26 +54,23 @@ async function connectToWindowScript(port) {
         const { hash } = message;
         const splitHash = hash.split("/m/");
 
-        const originSelector = `[data-flt-ve="origin_airport"]`;
-        const destinationSelector = `[data-flt-ve="destination_airport"]`;
+        const origin = await utils.getOriginInputData("GOOGLE_FLIGHTS_SEARCH");
+        const destination = await utils.getDestinationInputData("GOOGLE_FLIGHTS_SEARCH");
 
-        const origin = await utils.getDOMNodeText(originSelector);
-        const destination = await utils.getDOMNodeText(destinationSelector);
-
-        let resultsSelector;
-        let searchResults;
+        let resultsSelector, searchResults;
 
         if(splitHash.length < 3) {
-          resultsSelector = ".gws-flights-results__originless";
-          searchResults = await utils.getDOMNodes(resultsSelector);
-        } else if(splitHash.length === 3) {
-          if(origin && (destination.includes("Try") || destination === "Where to?")) {
-            resultsSelector = `.gws-flights-results__destination-result-button`;
-            searchResults = await utils.getDOMNodes(resultsSelector);
-          } else {
-            resultsSelector = `.gws-flights-results__select-header.gws-flights__flex-filler`;
-            searchResults = await utils.getDOMNodes(resultsSelector);
-          };
+          resultsSelector = ".gws-flights-results__originless .gws-flights-results__destination-name";
+        } else if(splitHash.length >= 3) {
+          resultsSelector = `.gws-flights-results__destination-result-button .flt-subhead1`;
+        };
+
+        searchResults = await utils.getDOMNodes(resultsSelector);
+
+        if(searchResults.length === 0) {
+          const textContent = "No available flights detected.";
+          
+          searchResults.push({ textContent });
         };
 
         port.postMessage({
@@ -85,21 +82,25 @@ async function connectToWindowScript(port) {
         break;     
       };
       case "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST": {
-        const originSelector = `[data-flt-ve="origin_airport"]`;
-        const destinationSelector = `[data-flt-ve="destination_airport"]`;
+        const { hash } = message;
+        const splitHash = hash.split(".");
 
-        const origin = await utils.getDOMNodeText(originSelector);
-        const destination = await utils.getDOMNodeText(destinationSelector);
+        const origin = await utils.getOriginInputData("GOOGLE_FLIGHTS_SELECTION");
 
-        let resultsSelector;
-        let searchResults;
+        const destination = await utils.getDestinationInputData("GOOGLE_FLIGHTS_SELECTION");
 
-        if(origin && (destination.includes("Try") || destination === "Where to?")) {
-          resultsSelector = `.gws-flights-results__destination-result-button`;
-          searchResults = await utils.getDOMNodes(resultsSelector);
-        } else {
-          resultsSelector = `.gws-flights-results__select-header.gws-flights__flex-filler`;
-          searchResults = await utils.getDOMNodes(resultsSelector);
+        let resultsSelector, searchResults;
+
+        if(splitHash.length >= 5) {
+          resultsSelector = `.gws-flights-results__itinerary-card-summary.gws-flights-results__result-item-summary`;
+        };
+
+        searchResults = await utils.getDOMNodes(resultsSelector);
+
+        if(searchResults.length === 0) {
+          const textContent = "No available flights detected.";
+          
+          searchResults.push({ textContent });
         };
 
         port.postMessage({
@@ -110,13 +111,12 @@ async function connectToWindowScript(port) {
         break;     
       };
       case "GOOGLE_FLIGHTS_BOOKING_DETAILS_REQUEST": {
-        const originSelector = `.gws-flights__flex-box .gws-flights-book__round-trip .gws-flights__flex-shrink`;
-        const destinationSelector = `.gws-flights__flex-box .gws-flights-book__round-trip .gws-flights-book__destination-airport`;
+        const origin = await utils.getOriginInputData("GOOGLE_FLIGHTS_BOOKING");
+        const destination = await utils.getDestinationInputData("GOOGLE_FLIGHTS_BOOKING");
+
         const resultsSelector = `.gws-flights-book__booking-options tr`;
         const selectedFlightsSelector = `.gws-flights-results__selections-list .gws-flights-results__slice-selection`;
 
-        const origin = await utils.getDOMNodeText(originSelector);
-        const destination = await utils.getDOMNodeText(destinationSelector);
         const searchResults = await utils.getDOMNodes(resultsSelector);
         const selectedFlights = await utils.getDOMNodes(selectedFlightsSelector);
 
@@ -128,16 +128,25 @@ async function connectToWindowScript(port) {
         break;  
       };
       case "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_REQUEST": {
-        // TODO
-        // console.log("IN FLIGHTS CHECKOUT");
+        const { hash } = message;
+        const splitHash = hash.split(".");
+
+        const origin = await utils.getOriginInputData("GOOGLE_FLIGHTS_CHECKOUT");
+        const destination = await utils.getDestinationInputData("GOOGLE_FLIGHTS_CHECKOUT");
+
+        const splitHashSubString = splitHash[10].split(":");
+        const bookingProvider = splitHashSubString[1];
+
+        // let resultsSelector, searchResults;
 
         port.postMessage({
           type: "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_RESPONSE",
           pageType: "GOOGLE_FLIGHTS_CHECKOUT",
+          payload: { bookingProvider, origin, destination }
         });
         break;  
       };
-    };
+    }
   };
 
   port.onMessage.addListener(handleMessages);
