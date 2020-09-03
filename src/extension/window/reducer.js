@@ -31,6 +31,12 @@ const windowReducer = (state = initialState, { type, payload }) => {
         activeBrowserWindowId: payload.windowId
       }
     };
+    case actions.SET_DOM_FLIGHT_BOOKING_PROVIDER: {
+      return {
+        ...state,
+        DOMBookingProvider: payload.bookingProvider
+      }
+    };
     case actions.SET_DOM_FLIGHT_DESTINATION: {
       return {
         ...state,
