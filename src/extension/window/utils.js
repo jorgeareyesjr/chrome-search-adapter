@@ -21,13 +21,13 @@ async function injectApp() {
 
       switch(origin) {
         // TODO
-        case "https://duckduckgo.com": {
-          // appName = `${hostComponent[0]}-browsing-utility`;
-          appName = `google-browsing-utility`;
-          appHost = `http://localhost:3000`;
+        // case "https://duckduckgo.com": {
+        //   // appName = `${hostComponent[0]}-browsing-utility`;
+        //   appName = `google-browsing-utility`;
+        //   appHost = `http://localhost:3000`;
           
-          break;
-        }
+        //   break;
+        // }
         case "https://www.google.com": {
           appName = `${hostComponent[1]}-browsing-utility`;
           appHost = `http://localhost:3000`;
@@ -161,15 +161,12 @@ async function injectContentScript(tabId) {
             // Determine if the current `contextUrl` will yield relevant DOM nodes.
             const { payload } = message;
             const { contextUrl } = payload;
-            const { origin, pathname, hash } = new URL(contextUrl);
-            
+            const { origin, pathname, hash, search } = new URL(contextUrl);
+
             if(origin === 'https://www.google.com') {
+              // Split the url hash to determine the context for the Google flights search support utility.
+              // The `splitHash` will have either 1, 3 or 5 substring(s).
               const splitHash = hash.split("/m/");
-              // Split the url hash to determine the context for the Google flights search support.
-              // The `splitHash` will have either 1, 3 or 5 substring(s):
-              // If 1 substring, the user is in the `GOOGLE FLIGHTS SEARCH` page, without an origin airport input.
-              // If 3 substrings, the user is in the `GOOGLE FLIGHTS SEARCH` page, with an origin airport input.
-              // If 5 substrings, the user may be in either the `GOOGLE FLIGHTS SEARCH` or `GOOGLE FLIGHTS SELECTION` page - another check is necessary to assign a `pageType`.
 
               if(pathname === '/') {
                 await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
@@ -179,13 +176,72 @@ async function injectContentScript(tabId) {
                 await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
                   type: "GOOGLE_SEARCH_RESULTS_REQUEST"
                 });
-              } else if((pathname === '/flights/' || pathname === '/flights') && splitHash.length < 5) {
-               await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
-                 type: "GOOGLE_FLIGHTS_SEARCH_DETAILS_REQUEST",
-                 hash
-                });
-              } else if(pathname === '/flights' && splitHash.length === 5) {
-                // The user may be in either the `GOOGLE FLIGHTS SELECTION`, `GOOGLE FLIGHTS BOOKING`, or `GOOGLE FLIGHTS CHECKOUT` page - check the `splitHash` substrings to assign the proper `pageType`.
+              } else if((pathname === '/flights/' || pathname === '/flights') && splitHash.length === 1) {
+                // If `splitHash` has 1 substring, the user may be in either the `GOOGLE FLIGHTS SEARCH` (without an origin airport input), `GOOGLE FLIGHTS SELECTION`, or `GOOGLE FLIGHTS BOOKING` page - check the `splitHash` substrings to assign the proper `pageType`.
+                const splitHashSubString = splitHash[0].split(".");
+                // The new `splitHashSubString` will contain either 5, 8, or 11 substrings.
+
+                if(splitHashSubString.length === 5) {
+                  // If the new `splitHashSubString` contains 5 substrings, the user is selecting a departing flight.
+                  // The user may be in either the `GOOGLE FLIGHTS SEARCH` or `GOOGLE FLIGHTS SELECTION` page.
+
+                  if(splitHashSubString[1] && splitHashSubString[3]) {
+                    // The user is in the `GOOGLE FLIGHTS SEARCH` page.
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                      hash
+                      });
+                  } else {
+                    // The user is in the `GOOGLE FLIGHTS SELECTION` page.
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_SEARCH_DETAILS_REQUEST",
+                      hash
+                      });
+                  };
+                } else if(splitHashSubString.length === 8) {
+                  // If the new `splitHashSubString` contains 8 substrings, the user is selecting a returning flight.
+                  // The user is in the `GOOGLE FLIGHTS SELECTION` page.
+                  await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                    type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                    hash
+                    });
+                } else if(splitHashSubString.length === 11) {
+                  // If the new `splitHashSubString` contains 11 substrings, the user has already selected both a departing and returning flight.
+                  const bookingProvider = splitHashSubString[10].split(":");
+
+                  if(bookingProvider[1]) {
+                    // The user is in the `GOOGLE FLIGHTS BOOKING` page. 
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_REQUEST",
+                      hash
+                      });
+                  } else {
+                    // The user is in the `GOOGLE FLIGHTS BOOKING` page. 
+                    await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                      type: "GOOGLE_FLIGHTS_BOOKING_DETAILS_REQUEST",
+                      hash
+                      });
+                  };
+                };
+              } else if((pathname === '/flights/' || pathname === '/flights') && splitHash.length === 3) {
+                // If `splitHash` has 3 substrings, the user may be in either the `GOOGLE FLIGHTS SEARCH` (with an origin airport input) or `GOOGLE FLIGHTS SELECTION` page - check the `splitHash` substrings to assign the proper `pageType`.
+                const splitHashSubString = splitHash[1].split(".");
+
+                if(splitHashSubString[1]) {
+                  await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                    type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
+                    hash,
+                    search
+                    });
+                } else {
+                  await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
+                    type: "GOOGLE_FLIGHTS_SEARCH_DETAILS_REQUEST",
+                    hash
+                    });
+                };
+              } else if(pathname === '/flights/' || pathname === '/flights' && splitHash.length === 5) {
+                // If `splitHash` has 5 substrings, the user may be in either the `GOOGLE FLIGHTS SELECTION`, `GOOGLE FLIGHTS BOOKING`, or `GOOGLE FLIGHTS CHECKOUT` page - check the `splitHash` substrings to assign the proper `pageType`.
+
                 // The 2nd `splitHash` substring contains departing flight data (date and flight selection details).
                 // The 4th `splitHash` substring contains returning flight data (date and flight selection details).
                 const departingFlight = splitHash[2].split(".");
@@ -197,7 +253,7 @@ async function injectContentScript(tabId) {
                   const bookedFlights = returningFlight[6].split(":");
 
                   if(bookedFlights[2]) {
-                     // In the `GOOGLE FLIGHTS CHECKOUT` page.
+                    // In the `GOOGLE FLIGHTS CHECKOUT` page.
                     await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
                       type: "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_REQUEST",
                       hash
@@ -215,7 +271,8 @@ async function injectContentScript(tabId) {
                     } else {
                       await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
                         type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
-                        hash
+                        hash,
+                        search
                       });
                     };
                   };
@@ -235,7 +292,8 @@ async function injectContentScript(tabId) {
                     // Flights are being selected.
                     await window.__CHROME_WEB_BROWSER_ADAPTER_PORT__.postMessage({
                       type: "GOOGLE_FLIGHTS_SELECTION_DETAILS_REQUEST",
-                      hash
+                      hash,
+                      search
                     });
                   };
                 } else {
@@ -246,10 +304,8 @@ async function injectContentScript(tabId) {
                   });
                 };
               };
-              // TODO
-              // else if (url.pathname === '/travel/explore') {}
             } else {
-              // This context will not yield any DOM search result nodes - clean up any previously set DOM data.
+              // This context will not yield any DOM nodes - clean up any previously set DOM node data.
               await store.dispatch(actions.clearDOMData(null));
               await injectApp();
             };
@@ -316,10 +372,14 @@ async function injectContentScript(tabId) {
             break;
           };
           case "GOOGLE_FLIGHTS_CHECKOUT_DETAILS_RESPONSE": {
-            // TODO
-            const { pageType } = message;
+            const { pageType, payload } = message;
+            const { bookingProvider, origin, destination } = payload;
 
             await store.dispatch(actions.setPageType(pageType));
+            await store.dispatch(actions.setDOMFlightOrigin(origin));
+            await store.dispatch(actions.setDOMFlightDestination(destination));
+            // await store.dispatch(actions.setDOMSearchResults(searchResults));
+            await store.dispatch(actions.setDOMFlightBookingProvider(bookingProvider));
             await injectApp();
 
             break;
